@@ -8,26 +8,37 @@
   :root {
     --background: 220 30% 5%;
     --foreground: 220 13% 91%;
+
     --card: 220 26% 9%;
     --card-foreground: 220 13% 91%;
+
     --popover: 220 26% 9%;
     --popover-foreground: 220 13% 91%;
+
     --primary: 155 100% 50%;
     --primary-foreground: 220 30% 5%;
+
     --secondary: 220 20% 14%;
     --secondary-foreground: 220 13% 91%;
+
     --muted: 220 20% 14%;
     --muted-foreground: 220 10% 55%;
+
     --accent: 220 20% 18%;
     --accent-foreground: 220 13% 91%;
+
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
+
     --warning: 48 96% 53%;
     --warning-foreground: 220 30% 5%;
+
     --border: 220 20% 16%;
     --input: 220 20% 16%;
     --ring: 155 100% 50%;
+
     --radius: 1rem;
+
     --sidebar-background: 220 30% 6%;
     --sidebar-foreground: 220 13% 91%;
     --sidebar-primary: 155 100% 50%;
@@ -36,50 +47,66 @@
     --sidebar-accent-foreground: 220 13% 91%;
     --sidebar-border: 220 20% 14%;
     --sidebar-ring: 155 100% 50%;
+
     --glow-primary: 0 0 20px hsl(155 100% 50% / 0.3);
     --glow-danger: 0 0 20px hsl(0 84% 60% / 0.3);
     --glow-warning: 0 0 20px hsl(48 96% 53% / 0.3);
+
     --glass-bg: hsl(220 26% 9% / 0.6);
     --glass-border: hsl(220 20% 20% / 0.5);
-
-    /* Gamification variables */
-    --xp-bar-color: 155 100% 50%;
-    --boss-glow: 0 84% 60%;
-    --combo-color: 48 96% 53%;
-    --rare-color: 217 91% 60%;
-    --epic-color: 271 91% 65%;
-    --legendary-color: 45 100% 55%;
   }
 }
 
 @layer base {
-  * { @apply border-border; }
+  * {
+    @apply border-border;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
   }
+
   code, .font-mono {
     font-family: 'JetBrains Mono', monospace;
   }
 }
 
 @layer components {
-  /* ── Core ───────────────────────────────────────────────────────────────── */
   .glass-card {
     @apply bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl;
   }
-  .glow-primary  { box-shadow: var(--glow-primary); }
-  .glow-danger   { box-shadow: var(--glow-danger); }
-  .glow-warning  { box-shadow: var(--glow-warning); }
-  .neon-text     { @apply text-primary; text-shadow: 0 0 10px hsl(155 100% 50% / 0.5); }
-  .terminal-text { font-family: 'JetBrains Mono', monospace; @apply text-primary text-sm; }
 
-  .status-pulse { @apply relative; }
+  .glow-primary {
+    box-shadow: var(--glow-primary);
+  }
+
+  .glow-danger {
+    box-shadow: var(--glow-danger);
+  }
+
+  .glow-warning {
+    box-shadow: var(--glow-warning);
+  }
+
+  .neon-text {
+    @apply text-primary;
+    text-shadow: 0 0 10px hsl(155 100% 50% / 0.5);
+  }
+
+  .status-pulse {
+    @apply relative;
+  }
   .status-pulse::after {
     content: '';
     @apply absolute inset-0 rounded-full animate-ping;
     background: inherit;
     opacity: 0.4;
+  }
+
+  .terminal-text {
+    font-family: 'JetBrains Mono', monospace;
+    @apply text-primary text-sm;
   }
 
   .gradient-border {
@@ -100,19 +127,29 @@
     mask-composite: exclude;
   }
 
-  .scrollbar-thin::-webkit-scrollbar       { width: 4px; }
-  .scrollbar-thin::-webkit-scrollbar-track { @apply bg-transparent; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
 
   .cyber-grid {
     background-size: 40px 40px;
-    background-image:
-      linear-gradient(to right,  hsl(var(--primary) / 0.03) 1px, transparent 1px),
+    background-image: 
+      linear-gradient(to right, hsl(var(--primary) / 0.03) 1px, transparent 1px),
       linear-gradient(to bottom, hsl(var(--primary) / 0.03) 1px, transparent 1px);
     background-position: center;
   }
 
-  .scanline { position: relative; overflow: hidden; }
+  .scanline {
+    position: relative;
+    overflow: hidden;
+  }
+  
   .scanline::after {
     content: "";
     position: absolute;
@@ -124,12 +161,17 @@
     pointer-events: none;
   }
 
-  .glitch-text { position: relative; display: inline-block; }
+  .glitch-text {
+    position: relative;
+    display: inline-block;
+  }
   .glitch-text::before, .glitch-text::after {
     content: attr(data-text);
     position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     opacity: 0.8;
   }
   .glitch-text::before {
@@ -142,145 +184,12 @@
     text-shadow: -1px 0 hsl(180 100% 50%);
     animation: glitch 2s ease-in-out infinite alternate;
   }
-
-  /* ── Gamification ───────────────────────────────────────────────────────── */
-
-  /* XP Bar */
-  .xp-bar-track {
-    @apply relative h-2 rounded-full overflow-hidden;
-    background: hsl(220 20% 14%);
-  }
-  .xp-bar-fill {
-    @apply h-full rounded-full;
-    background: linear-gradient(90deg, hsl(155 100% 40%), hsl(155 100% 60%));
-    box-shadow: 0 0 8px hsl(155 100% 50% / 0.6);
-    transform-origin: left;
-    animation: xp-bar-fill 1s ease-out forwards;
-  }
-  .xp-bar-shimmer {
-    @apply absolute inset-0 rounded-full;
-    background: linear-gradient(90deg, transparent 0%, hsl(155 100% 80% / 0.3) 50%, transparent 100%);
-    animation: data-stream 2s linear infinite;
-  }
-
-  /* Boss Mode */
-  .boss-mode {
-    animation: boss-pulse 1.8s ease-in-out infinite;
-    border-color: hsl(0 84% 60% / 0.6) !important;
-  }
-  .boss-mode-bg {
-    background: linear-gradient(135deg, hsl(0 84% 60% / 0.05), hsl(220 26% 9% / 0.9));
-  }
-  .boss-indicator {
-    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider;
-    background: hsl(0 84% 60% / 0.15);
-    border: 1px solid hsl(0 84% 60% / 0.4);
-    color: hsl(0 84% 70%);
-    text-shadow: 0 0 8px hsl(0 84% 60% / 0.5);
-    animation: boss-pulse 2s ease-in-out infinite;
-  }
-
-  /* Combo Multiplier */
-  .combo-badge {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-xl font-bold text-sm;
-    background: hsl(48 96% 53% / 0.12);
-    border: 1px solid hsl(48 96% 53% / 0.35);
-    color: hsl(48 96% 60%);
-    text-shadow: 0 0 10px hsl(48 96% 53% / 0.6);
-  }
-  .combo-badge.combo-active {
-    animation: combo-burst 0.4s ease-out;
-  }
-
-  /* Streak flame */
-  .streak-flame-icon {
-    animation: streak-flame 0.8s ease-in-out infinite;
-    filter: drop-shadow(0 0 6px hsl(25 95% 53%));
-  }
-
-  /* Achievement rarity */
-  .rarity-common    { border-color: hsl(220 20% 30% / 0.6); }
-  .rarity-rare      { border-color: hsl(217 91% 60% / 0.5); box-shadow: 0 0 12px hsl(217 91% 60% / 0.2); }
-  .rarity-epic      { border-color: hsl(271 91% 65% / 0.5); box-shadow: 0 0 16px hsl(271 91% 65% / 0.25); }
-  .rarity-legendary {
-    border-color: hsl(45 100% 55% / 0.6);
-    box-shadow: 0 0 24px hsl(45 100% 55% / 0.3);
-    background: linear-gradient(135deg, hsl(45 100% 55% / 0.06), hsl(220 26% 9% / 0.8));
-  }
-
-  /* Mission phase indicator */
-  .phase-badge {
-    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider;
-  }
-  .phase-initial-access { @apply bg-orange-500/10 text-orange-400 border border-orange-500/30; }
-  .phase-discovery      { @apply bg-blue-500/10  text-blue-400  border border-blue-500/30; }
-  .phase-lateral        { @apply bg-destructive/10 text-red-400  border border-destructive/30; }
-  .phase-containment    { @apply bg-warning/10   text-yellow-400 border border-warning/30; }
-  .phase-recovery       { @apply bg-primary/10   text-primary   border border-primary/30; }
-
-  /* Difficulty badges */
-  .diff-easy      { @apply bg-primary/10   text-primary    border-primary/30; }
-  .diff-normal    { @apply bg-blue-500/10  text-blue-400   border-blue-500/30; }
-  .diff-hard      { @apply bg-orange-500/10 text-orange-400 border-orange-500/30; }
-  .diff-nightmare { @apply bg-destructive/10 text-red-400   border-destructive/30; animation: boss-pulse 2s ease-in-out infinite; }
-
-  /* Trust meter */
-  .trust-bar-track { @apply h-1.5 rounded-full overflow-hidden bg-secondary; }
-  .trust-bar-fill  {
-    @apply h-full rounded-full transition-all duration-700;
-    background: linear-gradient(90deg, hsl(155 100% 35%), hsl(155 100% 60%));
-    box-shadow: 0 0 6px hsl(155 100% 50% / 0.4);
-  }
-
-  /* Agent card */
-  .agent-card-ready    { border-color: hsl(155 100% 50% / 0.3); }
-  .agent-card-cooldown { border-color: hsl(48 96% 53% / 0.3); }
-  .agent-card-analyzing{
-    border-color: hsl(217 91% 60% / 0.4);
-    box-shadow: 0 0 16px hsl(217 91% 60% / 0.15);
-    animation: neon-border 2s ease-in-out infinite;
-  }
-
-  /* Rank badge */
-  .rank-badge {
-    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest;
-    background: hsl(155 100% 50% / 0.08);
-    border: 1px solid hsl(155 100% 50% / 0.25);
-    color: hsl(155 100% 55%);
-    text-shadow: 0 0 8px hsl(155 100% 50% / 0.4);
-  }
-
-  /* Mission card */
-  .mission-card {
-    @apply glass-card p-4 relative overflow-hidden transition-all duration-300;
-  }
-  .mission-card:hover { transform: translateY(-2px); }
-  .mission-card.boss   { @apply boss-mode boss-mode-bg; }
-  .mission-card.active { border-color: hsl(155 100% 50% / 0.35); }
-
-  /* HUD panel */
-  .hud-panel {
-    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl border border-border/50 bg-card/80 backdrop-blur;
-  }
-
-  /* XP popup overlay */
-  .xp-popup {
-    @apply absolute pointer-events-none z-50 font-bold text-lg select-none;
-    animation: xp-float 1.4s ease-out forwards;
-    text-shadow: 0 0 12px currentColor;
-  }
-
-  /* Data stream line for backgrounds */
-  .data-stream-line {
-    @apply absolute h-px w-full overflow-hidden opacity-20;
-    background: linear-gradient(90deg, transparent, hsl(var(--primary)), transparent);
-  }
 }
 
 @layer utilities {
-  .animate-glow { animation: glow-pulse 2s ease-in-out infinite; }
-  .perspective-800 { perspective: 800px; }
-  .transform-style-3d { transform-style: preserve-3d; }
+  .animate-glow {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
 }
 
 @keyframes glow-pulse {

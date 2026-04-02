@@ -34,3 +34,57 @@ threat: |
 
   Correlated attack summary:
   {correlation_summary}
+
+decision: |
+  You are a SOC decision engine.
+  You will be given threat intelligence and memory context (current session + historical incidents).
+  Your task is to decide what action the SOC should take.
+
+  Produce a JSON object with exactly these fields:
+  - action          : one of "block" | "escalate" | "monitor" | "log"
+  - reasoning       : one sentence explaining why
+  - requires_human  : true if severity is critical or high, otherwise false
+  - ips_to_act_on   : list of IPs that should be acted on (highest severity first)
+  - priority        : critical / high / medium / low
+
+  Rules:
+  - block       → repeat offender OR sql_injection OR critical severity
+  - escalate    → high severity AND no prior history
+  - monitor     → medium severity
+  - log         → low severity or insufficient evidence
+
+  Threat intelligence:
+  {threat_summary}
+
+  Memory context:
+  {memory_summary}
+
+report: |
+  You are a SOC incident report writer.
+  Generate a concise, structured incident report for a security analyst.
+
+  Use this format:
+  ## Incident Report
+
+  **Date:** {timestamp}
+  **Severity:** <severity>
+  **Attack Type:** <attack_type>
+  **MITRE ATT&CK:** <mitre_id> — <mitre_tactic>
+
+  ### Affected IPs
+  <bullet list of IPs with their scores and event types>
+
+  ### Attack Summary
+  <2-3 sentences describing what happened>
+
+  ### Threat Intelligence
+  <CVEs if any, impact, MITRE technique>
+
+  ### Decision Taken
+  <action decided, reasoning, whether human was involved>
+
+  ### Recommendations
+  <numbered list of 2-3 concrete remediation steps>
+
+  Full pipeline context:
+  {pipeline_context}

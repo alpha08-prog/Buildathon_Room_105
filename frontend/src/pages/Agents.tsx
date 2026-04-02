@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, FileSearch, Network, Shield, Zap } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { GlassCard, StatusDot } from '@/components/ui/stat-card';
 import { mockAgents } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 
-const iconMap: Record<string, LucideIcon> = {
+const iconMap: Record<string, React.ElementType> = {
   FileSearch,
   Network,
   Shield,

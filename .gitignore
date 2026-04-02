@@ -1,8 +1,15 @@
-research
-.node_modules
-.vscode
-.yml
+# Python
 __pycache__/
+*.py[cod]
+*.pyo
+
+# Env
 .env
-CybORG/
-Cybersleuth_Forensic_Agent/
+*.env
+
+# SQLite databases
+*.db
+*.sqlite3
+
+# Byte-compiled
+*.pyc

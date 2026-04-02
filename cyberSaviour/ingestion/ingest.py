@@ -41,9 +41,9 @@ class ingestEngine:
 
         return self.event_queue
 
-engine = ingestEngine()
-q = engine.startIngestion()
-
-while True:
-    event = q.get()
-    print(event)
+if __name__ == '__main__':
+    engine = ingestEngine()
+    q = engine.startIngestion()
+    while True:
+        event = q.get()
+        print(event)
