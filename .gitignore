@@ -1,0 +1,6 @@
+research
+.node_modules
+.vscode
+.yml
+__pycache__/
+.env
