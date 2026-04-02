@@ -1,7 +1,0 @@
-venv/
-.env
-**/subagent_logs/
-**/log_judge/
-**/log_steps/
-**/result**
-**/__pycache__/

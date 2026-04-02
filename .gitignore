@@ -4,3 +4,5 @@ research
 .yml
 __pycache__/
 .env
+CybORG/
+Cybersleuth_Forensic_Agent/
