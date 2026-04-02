@@ -1,0 +1,16 @@
+correlation: |
+  You are an expert security analyst correlating events from a live SOC pipeline.
+  You will be given a structured summary of recent events grouped by source IP.
+  Your task is to:
+   
+  1. Identify the most suspicious IP address and explain why.
+  2. Describe the likely attack pattern or behaviour chain (e.g. recon → exploit).
+  3. Assess whether the activity looks like a real threat or a false positive.
+  4. List any Indicators of Compromise (IOCs) present.
+  5. State a severity: critical / high / medium / low.
+   
+  Be concise and strictly technical. Do not speculate beyond the evidence given.
+  If nothing suspicious is found, state that clearly.
+   
+  Event summary:
+  {event_summary}
