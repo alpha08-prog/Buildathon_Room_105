@@ -1,5 +1,5 @@
 """
-Pipeline test: LogAgent → CorrelationAgent → ThreatAgent
+Pipeline test: LogAgent → CorrelationAgent → ThreatAgent → MemoryLayer
 
 Run from cyberSaviour/:
     python main.py
@@ -9,6 +9,7 @@ import json
 from agents.logAgent.agent import LogAgent
 from agents.correlation_agent.agent import CorrelationAgent
 from agents.threat_agent.agent import ThreatAgent
+from memory.layer import MemoryLayer
 
 # ---------------------------------------------------------------------------
 # Synthetic events that mimic what ingestion/parse.py produces
@@ -61,6 +62,10 @@ def run_threat_agent(state):
     agent = ThreatAgent()
     return agent.process(state)
 
+def run_memory_layer(state):
+    layer = MemoryLayer()
+    return layer.process(state)
+
 def pretty(label, data):
     print(f"\n{'='*60}")
     print(f"  {label}")
@@ -99,3 +104,12 @@ if __name__ == "__main__":
     threat = state["context"].get("threat_intel", {})
     pretty("MITRE Anchor (rule-based)", threat.get("mitre_anchor", {}))
     pretty("Threat Intelligence (LLM enrichment)", threat.get("llm_enrichment", ""))
+
+    # --- Stage 4: MemoryLayer ---
+    print("\n[4/4] Running MemoryLayer ...")
+    state = run_memory_layer(state)
+
+    memory = state["context"].get("memory", {})
+    pretty("Repeat Offenders (historical hit count)", memory.get("repeat_offenders", {}))
+    pretty("Session Incidents (short-term)", memory.get("session_incidents", []))
+    pretty("Historical Incidents (SQLite recall)", memory.get("historical_incidents", []))
