@@ -4,8 +4,10 @@ import {
   Trophy, Search, BookOpen, Tag, Calendar, ChevronRight,
   Lock, Zap, Star,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { GlassCard } from '@/components/ui/stat-card';
+import { AchievementTrophy } from '@/components/3d/AchievementTrophy';
 import { useStore } from '@/store/useStore';
 import { mockMemoryEntries } from '@/data/mockData';
 import { cn } from '@/lib/utils';
@@ -24,7 +26,7 @@ import {
   Search as SearchIcon, Sword,
 } from 'lucide-react';
 
-const ICON_MAP: Record<string, React.ElementType> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   Trophy: TrophyIcon, Zap: ZapIcon, Flame, ShieldOff, Ghost, BookOpen: BookOpenIcon,
   Search: SearchIcon, Sword,
 };
@@ -47,6 +49,13 @@ function AchievementCard({ achievement, index }: { achievement: Achievement; ind
       )}
       style={{ boxShadow: unlocked ? cfg.glow : 'none' }}
     >
+      <AchievementTrophy
+        rarity={achievement.rarity}
+        showUnlock={unlocked && achievement.rarity === 'legendary'}
+        size={76}
+        className="shrink-0"
+      />
+
       {/* Shine for legendary */}
       {unlocked && achievement.rarity === 'legendary' && (
         <div className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${cfg.color}, transparent)` }} />

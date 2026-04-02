@@ -7,6 +7,7 @@ import {
   MessageSquare, Lock,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { MissionPhaseCascade } from '@/components/3d/MissionPhaseCascade';
 import { GlassCard } from '@/components/ui/stat-card';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
@@ -306,6 +307,9 @@ export default function MissionBriefing() {
           </h2>
           <div className="flex justify-center overflow-x-auto pb-2">
             <PhaseStepper current={mission.phase} />
+          </div>
+          <div className="mt-5">
+            <MissionPhaseCascade currentPhase={mission.phase} progress={mission.phaseProgress} height={220} />
           </div>
           <div className="mt-5 p-4 rounded-xl border border-border/30 bg-secondary/20">
             <p className="text-xs font-bold mb-1" style={{ color: phaseColor }}>

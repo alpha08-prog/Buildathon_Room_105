@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Zap, Flame, ShieldOff, Ghost, BookOpen, Search, Sword } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import type { Achievement } from '@/data/mockData';
 
-const ICONS: Record<string, React.ElementType> = {
+const ICONS: Record<string, LucideIcon> = {
   Trophy, Zap, Flame, ShieldOff, Ghost, BookOpen, Search, Sword,
 };
 

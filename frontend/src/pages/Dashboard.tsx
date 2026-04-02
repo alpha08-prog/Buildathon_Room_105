@@ -3,19 +3,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle, ShieldAlert, Activity, TrendingUp, Clock,
-  Server, Swords, Zap, ChevronRight, Target, Users, Timer,
+  Swords, Zap, ChevronRight, Target, Users, Timer,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar,
+  ResponsiveContainer,
 } from 'recharts';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { StatCard, GlassCard, SeverityBadge, StatusDot } from '@/components/ui/stat-card';
 import { useStore } from '@/store/useStore';
-import { threatChartData, mockAlerts, Alert, rankTiers } from '@/data/mockData';
+import { threatChartData, Alert, rankTiers } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { AttackGraph } from '@/components/AttackGraph';
 import { StreakFlame } from '@/components/animations/StreakFlame';
+import { HolographicThreatSphere } from '@/components/3d/HolographicThreatSphere';
 
 // ── Simulated alerts pool ────────────────────────────────────────────────────
 const simulatedAlerts: Partial<Alert>[] = [
@@ -402,6 +403,21 @@ export default function Dashboard() {
         </div>
 
         {/* ── Active Missions + Attack Graph ──────────────────────────────── */}
+        <GlassCard className="overflow-hidden p-0">
+          <div className="flex items-center justify-between px-5 pt-5">
+            <h2 className="text-sm font-semibold flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <span className="tracking-wider">Threat Topology</span>
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              {hasBoss ? 'Boss pressure detected' : 'Live attack mapping'}
+            </span>
+          </div>
+          <div className="px-5 pb-5 pt-3">
+            <HolographicThreatSphere height={320} />
+          </div>
+        </GlassCard>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Active Missions */}
           <GlassCard className="flex flex-col gap-3">
