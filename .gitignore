@@ -13,3 +13,6 @@ __pycache__/
 
 # Byte-compiled
 *.pyc
+
+node_modules/
+frontend/dist/
