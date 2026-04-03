@@ -9,7 +9,7 @@ Run from cyberSaviour/:
 import asyncio
 import logging
 from datetime import datetime
-from typing import List
+from typing import Dict, List
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,7 +29,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"],
+    allow_origins=[
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://[::1]:8080",
+    ],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,6 +50,72 @@ _pipeline_agents:    List[dict] = []
 _pipeline_actions:   List[dict] = []
 _pipeline_memory:    List[dict] = []
 _pipeline_missions:  List[dict] = []
+_pipeline_responses: List[dict] = []
+_pending_action_contexts: Dict[str, dict] = {}
+
+
+def _identity_value(item: dict | None):
+    if not item:
+        return None
+    return item.get("dedupeKey") or item.get("id")
+
+
+def _prepend_unique(store: List[dict], items: List[dict]):
+    existing_by_identity = {
+        _identity_value(item): item
+        for item in store
+        if _identity_value(item) is not None
+    }
+    merged: List[dict] = []
+
+    for item in items:
+        identity = _identity_value(item)
+        if identity is None:
+            merged.append(item)
+            continue
+
+        current = existing_by_identity.pop(identity, None)
+        if current:
+            merged_item = {**current, **item}
+            if current.get("id"):
+                merged_item["id"] = current["id"]
+            merged.append(merged_item)
+        else:
+            merged.append(item)
+
+    merged.extend(existing_by_identity.values())
+    store[:] = merged
+
+
+def _upsert_one(store: List[dict], item: dict | None):
+    if not item:
+        return
+    identity = _identity_value(item)
+    updated = False
+    next_store: List[dict] = []
+
+    for current in store:
+        current_identity = _identity_value(current)
+        if identity is not None and current_identity == identity:
+            merged_item = {**current, **item}
+            if current.get("id"):
+                merged_item["id"] = current["id"]
+            next_store.append(merged_item)
+            updated = True
+        else:
+            next_store.append(current)
+
+    if not updated:
+        next_store.insert(0, item)
+
+    store[:] = next_store
+
+
+def _find_by_id(store: List[dict], item_id: str):
+    for item in store:
+        if item.get("id") == item_id:
+            return item
+    return None
 
 
 # ── Shared ingest helper ──────────────────────────────────────────────────────
@@ -54,14 +125,14 @@ async def _ingest_result(result: dict):
     Store pipeline result, update game state, broadcast everything via WebSocket.
     Called by both /api/pipeline/run and /api/pipeline/result.
     """
-    _pipeline_alerts[:0]  = result.get("alerts", [])
-    if result.get("incident"):
-        _pipeline_incidents.insert(0, result["incident"])
-    _pipeline_agents[:]   = result.get("agents", [])
-    _pipeline_actions[:0] = result.get("response_actions", [])
-    _pipeline_memory[:0]  = result.get("memory_entries", [])
-    if result.get("mission"):
-        _pipeline_missions.insert(0, result["mission"])
+    _prepend_unique(_pipeline_alerts, result.get("alerts", []))
+    _upsert_one(_pipeline_incidents, result.get("incident"))
+    _pipeline_agents[:] = result.get("agents", [])
+    _prepend_unique(_pipeline_actions, result.get("response_actions", []))
+    _prepend_unique(_pipeline_memory, result.get("memory_entries", []))
+    _upsert_one(_pipeline_missions, result.get("mission"))
+    _upsert_one(_pipeline_responses, result.get("response"))
+    _pending_action_contexts.update(result.get("_pending_action_contexts", {}))
 
     # ── Derive game-layer updates from pipeline outcome ───────────────────────
     game_update = game_store.apply_pipeline_result(result)
@@ -89,6 +160,7 @@ async def _ingest_result(result: dict):
     logger.info(
         f"[Pipeline] alerts={len(result.get('alerts', []))} "
         f"mission={'yes' if result.get('mission') else 'no'} "
+        f"response={'yes' if result.get('response') else 'no'} "
         f"xp_earned={game_update.get('xp_earned', 0)} "
         f"unlocked={[a['id'] for a in game_update.get('newly_unlocked', [])]}"
     )
@@ -137,7 +209,11 @@ async def complete_mission(mission_id: str):
             game_store.add_xp(xp, f"mission_complete:{mission_id}")
             await connection_manager.broadcast({
                 "type": "mission_completed",
-                "data": {"mission": m, "xp_earned": xp},
+                "data": {
+                    "mission": m,
+                    "xp_earned": xp,
+                    "game_state": game_store.state.dict(),
+                },
                 "timestamp": datetime.utcnow().isoformat(),
             })
             return m
@@ -168,6 +244,96 @@ async def get_response_actions():
 @app.get("/api/memory")
 async def get_memory():
     return {"memory_entries": _pipeline_memory, "count": len(_pipeline_memory)}
+
+
+@app.get("/api/responses")
+async def get_responses():
+    return {"responses": _pipeline_responses, "count": len(_pipeline_responses)}
+
+
+@app.post("/api/response-actions/{action_id}/decision")
+async def decide_response_action(action_id: str, payload: dict):
+    decision = payload.get("decision")
+    if decision not in {"approved", "rejected"}:
+        return JSONResponse(status_code=422, content={"detail": "decision must be approved or rejected"})
+
+    action = _find_by_id(_pipeline_actions, action_id)
+    if not action:
+        return JSONResponse(status_code=404, content={"detail": "Response action not found"})
+    if action.get("status") != "pending":
+        return JSONResponse(status_code=409, content={"detail": "Response action already reviewed"})
+
+    context = _pending_action_contexts.get(action_id, {})
+    incident = _find_by_id(_pipeline_incidents, action.get("incidentId"))
+    mission = next((m for m in _pipeline_missions if m.get("incidentId") == action.get("incidentId")), None)
+    response = next((r for r in _pipeline_responses if r.get("incidentId") == action.get("incidentId")), None)
+    ts = datetime.utcnow().isoformat()
+    xp_earned = 0
+
+    if decision == "approved":
+        action["status"] = "approved"
+        action["actionStatus"] = "success"
+        action["reviewedAt"] = ts
+        xp_earned = 80
+        game_store.add_xp(xp_earned, f"approve_response:{action_id}")
+        game_store.update_streak(True)
+
+        if incident:
+            incident["status"] = "investigating"
+            incident["updatedAt"] = ts
+        if mission:
+            for objective in mission.get("objectives", []):
+                desc = objective.get("description", "").lower()
+                if action.get("target", "").lower() in desc or action.get("action", "").lower() in desc:
+                    objective["completed"] = True
+            mission["updatedAt"] = ts
+        if response:
+            response["actionTaken"] = context.get("action", action.get("action", "log")).lower().replace(" ", "_")
+            response["actionStatus"] = "success"
+            response["ipsActedOn"] = [action.get("target", "unknown")]
+            response["requiresHumanApproval"] = False
+            response["timestamp"] = ts
+    else:
+        action["status"] = "rejected"
+        action["actionStatus"] = "rejected_by_human"
+        action["reviewedAt"] = ts
+        game_store.update_streak(False)
+        if incident:
+            incident["status"] = "open"
+            incident["updatedAt"] = ts
+        if response:
+            response["actionTaken"] = "rejected"
+            response["actionStatus"] = "rejected_by_human"
+            response["ipsActedOn"] = [action.get("target", "unknown")]
+            response["requiresHumanApproval"] = False
+            response["timestamp"] = ts
+
+    game_update = {
+        "game_state": game_store.state.dict(),
+        "xp_earned": xp_earned,
+    }
+    _pending_action_contexts.pop(action_id, None)
+
+    await connection_manager.broadcast({
+        "type": "response_action_updated",
+        "data": {
+            "action": action,
+            "game_update": game_update,
+            "incident": incident,
+            "mission": mission,
+            "response": response,
+        },
+        "timestamp": ts,
+    })
+
+    return {
+        "status": "ok",
+        "action": action,
+        "game_update": game_update,
+        "incident": incident,
+        "mission": mission,
+        "response": response,
+    }
 
 
 # ── /api/pipeline/run — server runs the pipeline itself ───────────────────────
@@ -224,6 +390,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "game_state":   game_store.state.dict(),
             "achievements": game_store.all_achievements(),
             "missions":     _pipeline_missions,
+            "responses":    _pipeline_responses,
         },
         "timestamp": datetime.utcnow().isoformat(),
     })

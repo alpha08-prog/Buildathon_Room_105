@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
@@ -12,21 +12,13 @@ import {
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { StatCard, GlassCard, SeverityBadge, StatusDot } from '@/components/ui/stat-card';
 import { useStore } from '@/store/useStore';
-import { threatChartData, Alert, rankTiers } from '@/data/mockData';
+import { threatChartData, rankTiers } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { AttackGraph } from '@/components/AttackGraph';
 import { StreakFlame } from '@/components/animations/StreakFlame';
 import { HolographicThreatSphere } from '@/components/3d/HolographicThreatSphere';
 
 // ── Simulated alerts pool ────────────────────────────────────────────────────
-const simulatedAlerts: Partial<Alert>[] = [
-  { title: 'C2 Beacon Detected',         severity: 'critical', source: '10.0.5.22' },
-  { title: 'Unusual PowerShell Activity', severity: 'high',    source: '10.0.1.88' },
-  { title: 'Suspicious File Download',    severity: 'medium',  source: '10.0.3.14' },
-  { title: 'SSH Key Manipulation',        severity: 'high',    source: '10.0.2.45' },
-  { title: 'Registry Modification',       severity: 'low',     source: '10.0.4.67' },
-];
-
 // ── XP Progress Bar ──────────────────────────────────────────────────────────
 function XpProgressBar({ xp, xpToNext, rank, tier }: { xp: number; xpToNext: number; rank: string; tier: number }) {
   const rankInfo = rankTiers.find((r) => r.tier === tier) ?? rankTiers[0];
@@ -199,31 +191,12 @@ function SquadMiniStatus({ agent }: { agent: any }) {
 
 // ── Main Dashboard ───────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { alerts, addAlert, simulationActive, gameState, missions, squad } = useStore();
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { alerts, gameState, missions, squad } = useStore();
   const [heatmapData] = useState(() =>
     Array.from({ length: 24 }, () =>
       Array.from({ length: 7 }, () => Math.floor(Math.random() * 10))
     )
   );
-
-  useEffect(() => {
-    if (simulationActive) {
-      intervalRef.current = setInterval(() => {
-        const tpl = simulatedAlerts[Math.floor(Math.random() * simulatedAlerts.length)];
-        addAlert({
-          id: `ALT-${Date.now()}`,
-          title: tpl.title!,
-          severity: tpl.severity!,
-          source: tpl.source!,
-          timestamp: new Date().toISOString(),
-          status: 'new',
-          description: 'Auto-generated alert from live simulation',
-        });
-      }, 3000);
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [simulationActive, addAlert]);
 
   const criticalCount  = alerts.filter((a) => a.severity === 'critical').length;
   const activeMissions = missions.filter((m) => m.status === 'active');

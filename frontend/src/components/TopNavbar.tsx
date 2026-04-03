@@ -61,7 +61,7 @@ export function TopNavbar() {
           )}
         >
           <Radio className={cn('h-3 w-3', simulationActive && 'animate-pulse')} />
-          {simulationActive ? 'LIVE' : 'Simulate'}
+          {simulationActive ? 'Running...' : 'Simulate'}
         </button>
 
         {/* Notifications */}

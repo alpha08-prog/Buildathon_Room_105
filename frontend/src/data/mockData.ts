@@ -54,6 +54,13 @@ export interface ResponseAction {
   status: 'pending' | 'approved' | 'rejected' | 'executed';
   suggestedBy: string;
   incidentId: string;
+  actionStatus?: string;
+  pipelineSteps?: string[];
+  priority?: 'critical' | 'high' | 'medium' | 'low';
+  report?: string;
+  requiresHumanApproval?: boolean;
+  reviewedAt?: string;
+  timestamp?: string;
 }
 
 export interface MemoryEntry {
@@ -64,6 +71,19 @@ export interface MemoryEntry {
   attackType: string;
   resolution: string;
   tags: string[];
+}
+
+export interface PipelineResponse {
+  id: string;
+  incidentId: string;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  actionTaken: string;
+  actionStatus: string;
+  ipsActedOn: string[];
+  report: string;
+  timestamp: string;
+  pipelineSteps: string[];
+  requiresHumanApproval: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -275,6 +295,21 @@ export const mockMemoryEntries: MemoryEntry[] = [
   { id: 'MEM-004', incidentTitle: 'Ransomware Deployment Prevented', date: '2024-06-18', similarity: 0.82, attackType: 'Ransomware', resolution: 'Isolated systems, restored from backup', tags: ['ransomware', 'backup', 'isolation'] },
   { id: 'MEM-005', incidentTitle: 'Phishing Campaign Targeting Finance', date: '2024-05-30', similarity: 0.76, attackType: 'Phishing', resolution: 'Blocked sender domains, user training', tags: ['phishing', 'email', 'social-engineering'] },
   { id: 'MEM-006', incidentTitle: 'Insider Threat - Data Download', date: '2024-04-14', similarity: 0.71, attackType: 'Insider Threat', resolution: 'Account suspended, HR escalation', tags: ['insider', 'dlp', 'download'] },
+];
+
+export const mockResponses: PipelineResponse[] = [
+  {
+    id: 'RESP-001',
+    incidentId: 'INC-001',
+    priority: 'critical',
+    actionTaken: 'block',
+    actionStatus: 'pending_human_review',
+    ipsActedOn: ['185.220.101.34'],
+    report: 'Threat pattern indicates lateral movement and credential abuse. Recommended immediate containment of the malicious source and impacted host.',
+    timestamp: '2024-12-15T14:31:00Z',
+    pipelineSteps: ['Log_Agent', 'Correlation_Agent', 'Threat_Agent', 'Memory_Layer', 'Decision_Layer', 'Report_Agent', 'Response_Agent'],
+    requiresHumanApproval: true,
+  },
 ];
 
 export const threatChartData = [

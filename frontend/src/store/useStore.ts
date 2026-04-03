@@ -7,6 +7,7 @@ import type {
   Incident,
   MemoryEntry,
   Mission,
+  PipelineResponse,
   ResponseAction,
   SquadAgent,
   XpEvent,
@@ -19,10 +20,16 @@ import {
   mockIncidents,
   mockMemoryEntries,
   mockMissions,
+  mockResponses,
   mockResponseActions,
   mockSquad,
   rankTiers,
 } from '@/data/mockData';
+import {
+  completeMissionRequest,
+  decideResponseAction,
+  runDemoPipeline as runDemoPipelineRequest,
+} from '@/lib/api';
 
 const XP_TABLE: Record<string, number> = {
   approve_response: 80,
@@ -44,6 +51,7 @@ type BackendPayload = {
   incidents?: Incident[];
   memoryEntries?: MemoryEntry[];
   missions?: Mission[];
+  responses?: PipelineResponse[];
   responseActions?: ResponseAction[];
   timestamp?: string;
 };
@@ -171,12 +179,19 @@ function normalizeResponseAction(action: Partial<ResponseAction>): ResponseActio
   return {
     id: action.id ?? `RA-${Date.now()}`,
     action: action.action ?? 'Review',
+    actionStatus: action.actionStatus,
     target: action.target ?? 'unknown',
+    pipelineSteps: action.pipelineSteps,
+    priority: action.priority,
+    report: action.report,
     riskLevel: action.riskLevel ?? 'low',
     explanation: action.explanation ?? '',
+    requiresHumanApproval: action.requiresHumanApproval ?? false,
+    reviewedAt: action.reviewedAt,
     status: action.status ?? 'pending',
     suggestedBy: action.suggestedBy ?? 'Backend',
     incidentId: action.incidentId ?? 'unknown',
+    timestamp: action.timestamp,
   };
 }
 
@@ -189,6 +204,21 @@ function normalizeMemoryEntry(entry: Partial<MemoryEntry>): MemoryEntry {
     attackType: entry.attackType ?? 'Unknown',
     resolution: entry.resolution ?? 'No resolution provided.',
     tags: entry.tags ?? [],
+  };
+}
+
+function normalizePipelineResponse(response: Partial<PipelineResponse>): PipelineResponse {
+  return {
+    id: response.id ?? `RESP-${Date.now()}`,
+    incidentId: response.incidentId ?? 'unknown',
+    priority: response.priority ?? 'low',
+    actionTaken: response.actionTaken ?? 'log',
+    actionStatus: response.actionStatus ?? 'unknown',
+    ipsActedOn: response.ipsActedOn ?? [],
+    report: response.report ?? 'No report generated.',
+    timestamp: response.timestamp ?? new Date().toISOString(),
+    pipelineSteps: response.pipelineSteps ?? [],
+    requiresHumanApproval: response.requiresHumanApproval ?? false,
   };
 }
 
@@ -292,8 +322,10 @@ interface SOCStore {
   missions: Mission[];
   notifications: number;
   pendingAchievement: Achievement | null;
-  rejectResponseAction: (id: string) => void;
+  rejectResponseAction: (id: string) => Promise<void>;
+  responses: PipelineResponse[];
   responseActions: ResponseAction[];
+  runDemoPipeline: () => Promise<void>;
   selectSquadMember: (agentId: string) => void;
   setBackendStatus: (status: BackendStatus, error?: string | null) => void;
   simulationActive: boolean;
@@ -306,7 +338,7 @@ interface SOCStore {
 
   addXP: (actionType: string, bonus?: number, triggerPos?: { x: number; y: number }) => void;
   advanceMissionPhase: (missionId: string) => void;
-  approveResponseAction: (id: string) => void;
+  approveResponseAction: (id: string) => Promise<void>;
 }
 
 export const useStore = create<SOCStore>((set, get) => ({
@@ -330,6 +362,10 @@ export const useStore = create<SOCStore>((set, get) => ({
     const state = get();
     const mission = state.missions.find((item) => item.id === missionId);
     if (!mission) return;
+
+    void completeMissionRequest(missionId).catch((error) => {
+      get().setBackendStatus('error', error instanceof Error ? error.message : 'Mission completion failed');
+    });
 
     const newMissionsCount = state.gameState.missionsCompleted + 1;
     const newAchievements = checkNewAchievements(
@@ -390,6 +426,9 @@ export const useStore = create<SOCStore>((set, get) => ({
           : state.memoryEntries,
         missions: payload.missions ? payload.missions.map(normalizeMission) : state.missions,
         notifications: deriveNotifications(alerts, responseActions),
+        responses: payload.responses
+          ? payload.responses.map(normalizePipelineResponse)
+          : state.responses,
         responseActions,
       };
     }),
@@ -411,6 +450,7 @@ export const useStore = create<SOCStore>((set, get) => ({
             ? (data.game_state as Record<string, unknown>)
             : undefined,
         missions: Array.isArray(data.missions) ? (data.missions as Mission[]) : undefined,
+        responses: Array.isArray(data.responses) ? (data.responses as PipelineResponse[]) : undefined,
         timestamp,
       });
       return;
@@ -454,6 +494,13 @@ export const useStore = create<SOCStore>((set, get) => ({
               ...state.missions,
             ])
           : state.missions;
+      const nextResponses =
+        data.response && typeof data.response === 'object'
+          ? dedupeById([
+              normalizePipelineResponse(data.response as PipelineResponse),
+              ...state.responses,
+            ])
+          : state.responses;
       const gameUpdate =
         typeof data.game_update === 'object' && data.game_update !== null
           ? (data.game_update as Record<string, unknown>)
@@ -477,6 +524,7 @@ export const useStore = create<SOCStore>((set, get) => ({
         incidents: nextIncidents,
         memoryEntries: nextMemory,
         missions: nextMissions,
+        responses: nextResponses,
         responseActions: nextActions,
         timestamp,
       });
@@ -508,6 +556,82 @@ export const useStore = create<SOCStore>((set, get) => ({
       return;
     }
 
+    if (message.type === 'response_action_updated') {
+      const data = message.data ?? {};
+      const updatedAction =
+        data.action && typeof data.action === 'object'
+          ? normalizeResponseAction(data.action as ResponseAction)
+          : null;
+      const updatedResponse =
+        data.response && typeof data.response === 'object'
+          ? normalizePipelineResponse(data.response as PipelineResponse)
+          : null;
+      const updatedIncident =
+        data.incident && typeof data.incident === 'object'
+          ? normalizeIncident(data.incident as Incident)
+          : null;
+      const updatedMission =
+        data.mission && typeof data.mission === 'object'
+          ? normalizeMission(data.mission as Mission)
+          : null;
+      const gameUpdate =
+        data.game_update && typeof data.game_update === 'object'
+          ? (data.game_update as Record<string, unknown>)
+          : undefined;
+      const xpEarned =
+        typeof gameUpdate?.xp_earned === 'number' ? gameUpdate.xp_earned : 0;
+
+      set((state) => ({
+        backendError: null,
+        backendStatus: 'connected',
+        gameState:
+          typeof gameUpdate?.game_state === 'object' && gameUpdate.game_state !== null
+            ? normalizeGameState(gameUpdate.game_state as Record<string, unknown>, state.gameState)
+            : state.gameState,
+        incidents: updatedIncident
+          ? state.incidents.map((incident) =>
+              incident.id === updatedIncident.id ? updatedIncident : incident
+            )
+          : state.incidents,
+        lastSyncedAt: timestamp,
+        missions: updatedMission
+          ? state.missions.map((mission) =>
+              mission.id === updatedMission.id ? updatedMission : mission
+            )
+          : state.missions,
+        notifications: deriveNotifications(
+          state.alerts,
+          updatedAction
+            ? state.responseActions.map((action) =>
+                action.id === updatedAction.id ? updatedAction : action
+              )
+            : state.responseActions
+        ),
+        responses: updatedResponse
+          ? dedupeById([updatedResponse, ...state.responses])
+          : state.responses,
+        responseActions: updatedAction
+          ? state.responseActions.map((action) =>
+              action.id === updatedAction.id ? updatedAction : action
+            )
+          : state.responseActions,
+        xpEvents:
+          xpEarned > 0
+            ? [
+                ...state.xpEvents,
+                {
+                  id: `xpe-${Date.now()}`,
+                  amount: xpEarned,
+                  reason: 'response_action_updated',
+                  multiplier: state.gameState.comboMultiplier,
+                  timestamp,
+                },
+              ].slice(-10)
+            : state.xpEvents,
+      }));
+      return;
+    }
+
     if (message.type === 'achievement_unlock') {
       const achievement =
         message.data && typeof message.data === 'object'
@@ -530,6 +654,13 @@ export const useStore = create<SOCStore>((set, get) => ({
         message.data && typeof message.data === 'object'
           ? (message.data as Record<string, unknown>).mission
           : undefined;
+      const gameStateData =
+        message.data &&
+        typeof message.data === 'object' &&
+        typeof (message.data as Record<string, unknown>).game_state === 'object' &&
+        (message.data as Record<string, unknown>).game_state !== null
+          ? ((message.data as Record<string, unknown>).game_state as Record<string, unknown>)
+          : undefined;
       const xpEarned =
         message.data &&
         typeof message.data === 'object' &&
@@ -540,6 +671,7 @@ export const useStore = create<SOCStore>((set, get) => ({
       set((state) => ({
         backendError: null,
         backendStatus: 'connected',
+        gameState: gameStateData ? normalizeGameState(gameStateData, state.gameState) : state.gameState,
         lastSyncedAt: timestamp,
         missions:
           missionData && typeof missionData === 'object'
@@ -578,19 +710,39 @@ export const useStore = create<SOCStore>((set, get) => ({
   missions: mockMissions.map(normalizeMission),
   notifications: deriveNotifications(mockAlerts, mockResponseActions),
   pendingAchievement: null,
+  responses: mockResponses.map(normalizePipelineResponse),
 
-  rejectResponseAction: (id) => {
+  rejectResponseAction: async (id) => {
     const state = get();
     const action = state.responseActions.find((item) => item.id === id);
     if (!action || action.status !== 'pending') return;
 
-    get().updateActionStatus(id, 'rejected');
-    set((currentState) => ({
-      gameState: { ...currentState.gameState, streak: 0, comboMultiplier: 1.0 },
-    }));
+    try {
+      await decideResponseAction(id, 'rejected');
+    } catch (error) {
+      get().setBackendStatus(
+        'error',
+        error instanceof Error ? error.message : 'Response rejection failed'
+      );
+    }
   },
 
   responseActions: mockResponseActions.map(normalizeResponseAction),
+  runDemoPipeline: async () => {
+    if (get().simulationActive) return;
+
+    set({ simulationActive: true });
+    try {
+      await runDemoPipelineRequest();
+    } catch (error) {
+      get().setBackendStatus(
+        'error',
+        error instanceof Error ? error.message : 'Demo pipeline run failed'
+      );
+    } finally {
+      set({ simulationActive: false });
+    }
+  },
 
   selectSquadMember: (agentId) => {
     const agent = get().squad.find((item) => item.id === agentId);
@@ -631,7 +783,9 @@ export const useStore = create<SOCStore>((set, get) => ({
       }),
     })),
 
-  toggleSimulation: () => set((state) => ({ simulationActive: !state.simulationActive })),
+  toggleSimulation: () => {
+    void get().runDemoPipeline();
+  },
 
   updateActionStatus: (id, status) =>
     set((state) => {
@@ -727,12 +881,18 @@ export const useStore = create<SOCStore>((set, get) => ({
     }));
   },
 
-  approveResponseAction: (id) => {
+  approveResponseAction: async (id) => {
     const state = get();
     const action = state.responseActions.find((item) => item.id === id);
     if (!action || action.status !== 'pending') return;
 
-    get().updateActionStatus(id, 'approved');
-    get().addXP('approve_response');
+    try {
+      await decideResponseAction(id, 'approved');
+    } catch (error) {
+      get().setBackendStatus(
+        'error',
+        error instanceof Error ? error.message : 'Response approval failed'
+      );
+    }
   },
 }));

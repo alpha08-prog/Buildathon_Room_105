@@ -1,19 +1,6 @@
 import { useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000').replace(
-  /\/$/,
-  ''
-);
-const WS_BASE_URL = API_BASE_URL.replace(/^http/i, 'ws');
-
-async function fetchJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
-  if (!response.ok) {
-    throw new Error(`${path} returned ${response.status}`);
-  }
-  return response.json() as Promise<T>;
-}
+import { fetchJson, WS_BASE_URL } from '@/lib/api';
 
 function formatError(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -41,6 +28,7 @@ export function BackendSync() {
           actionsResponse,
           memoryResponse,
           missionsResponse,
+          responsesResponse,
           gameStateResponse,
         ] = await Promise.all([
           fetchJson<{ alerts: unknown[] }>('/api/alerts'),
@@ -49,6 +37,7 @@ export function BackendSync() {
           fetchJson<{ response_actions: unknown[] }>('/api/response-actions'),
           fetchJson<{ memory_entries: unknown[] }>('/api/memory'),
           fetchJson<{ missions: unknown[] }>('/api/missions'),
+          fetchJson<{ responses: unknown[] }>('/api/responses'),
           fetchJson<{ achievements: unknown[]; state: Record<string, unknown>; timestamp: string }>(
             '/api/game-state'
           ),
@@ -64,6 +53,7 @@ export function BackendSync() {
           incidents: incidentsResponse.incidents as never[],
           memoryEntries: memoryResponse.memory_entries as never[],
           missions: missionsResponse.missions as never[],
+          responses: responsesResponse.responses as never[],
           responseActions: actionsResponse.response_actions as never[],
           timestamp: gameStateResponse.timestamp,
         });

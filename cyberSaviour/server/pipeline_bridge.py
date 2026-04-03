@@ -18,6 +18,7 @@ from agents.threat_agent.agent import ThreatAgent
 from agents.report_agent.agent import ReportAgent
 from agents.response_agent.agent import ResponseAgent
 from memory.layer import MemoryLayer
+from pipeline.action.config import ACTION_DESCRIPTIONS
 from pipeline.decision.layer import DecisionLayer
 from pipeline.human_in_loop.handler import HumanInLoop
 from pipeline.action.layer import ActionLayer
@@ -74,6 +75,28 @@ _PHASE_ORDER = [
 ]
 
 
+def _build_pending_action_result(decision: dict) -> dict:
+    action = decision.get("action", "log")
+    return {
+        "action": action,
+        "description": ACTION_DESCRIPTIONS.get(action, "Awaiting analyst approval"),
+        "priority": decision.get("priority", "low"),
+        "ips_acted_on": decision.get("ips_to_act_on", []),
+        "executed": [],
+        "reasoning": decision.get("reasoning", ""),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "status": "pending_human_review",
+    }
+
+
+def _dedupe_key(parts: list[str]) -> str:
+    return "|".join(part for part in parts if part)
+
+
+def _stable_id(prefix: str, key: str) -> str:
+    return f"{prefix}-{uuid.uuid5(uuid.NAMESPACE_URL, key).hex[:8].upper()}"
+
+
 def run_pipeline(events: list) -> dict:
     """Run the full CyberSaviour pipeline and return frontend-shaped data."""
     state = {"events": events, "alerts": [], "context": {}, "history": []}
@@ -89,8 +112,22 @@ def run_pipeline(events: list) -> dict:
     state = ThreatAgent().process(state)
     state = MemoryLayer().process(state)
     state = DecisionLayer().process(state)
-    state = HumanInLoop().process(state)
-    state = ActionLayer().process(state)
+    decision = state.get("context", {}).get("decision", {})
+
+    if decision.get("requires_human"):
+        review = {
+            "approved": False,
+            "action": decision.get("action"),
+            "modified": False,
+            "note": "awaiting frontend approval",
+            "pending": True,
+        }
+        state["context"]["human_review"] = review
+        state["context"]["action_result"] = _build_pending_action_result(decision)
+        state["history"].append({"agent": "Human_In_Loop", "output": review})
+    else:
+        state = HumanInLoop().process(state)
+        state = ActionLayer().process(state)
     state = ReportAgent().process(state)
     state = ResponseAgent().process(state)
 
@@ -128,8 +165,10 @@ def _shape(state: dict, raw_events: list) -> dict:
     attack    = mitre.get("technique", "Unknown Attack")
     tactic    = mitre.get("tactic", "Unknown Tactic")
     mitre_id  = mitre.get("id", "T0000")
-    src_ips   = list({e.get("source_ip") for e in raw_events if e.get("source_ip")})
+    src_ips   = sorted({e.get("source_ip") for e in raw_events if e.get("source_ip")})
     inc_id    = f"INC-{uuid.uuid4().hex[:6].upper()}"
+    action_key = (action_result.get("action") or decision.get("action") or "log").lower()
+    incident_key = _dedupe_key([mitre_id, tactic.lower(), priority.lower(), ",".join(src_ips)])
 
     # ── Alerts ────────────────────────────────────────────────────────────────
     alerts = []
@@ -166,6 +205,7 @@ def _shape(state: dict, raw_events: list) -> dict:
     ]
     incident = {
         "id":              inc_id,
+        "dedupeKey":       incident_key,
         "title":           f"{attack} — Priority {priority.upper()}",
         "severity":        _map_priority(priority),
         "status":          inc_status,
@@ -196,20 +236,74 @@ def _shape(state: dict, raw_events: list) -> dict:
 
     # ── Response actions ──────────────────────────────────────────────────────
     action = action_result.get("action", "")
-    response_actions = [
-        {
-            "id":          f"RA-{uuid.uuid4().hex[:8].upper()}",
-            "action":      action.replace("_", " ").title(),
-            "target":      ex.get("ip", "unknown"),
-            "riskLevel":   _action_risk(action),
-            "explanation": ex.get("detail", ""),
-            "status":      "executed" if ex.get("status") == "executed" else "pending",
-            "suggestedBy": "Response Agent",
-            "incidentId":  inc_id,
-        }
-        for ex in action_result.get("executed", [])
-        if action and action != "rejected"
-    ]
+    response_payload = {
+        "id":                    f"RESP-{uuid.uuid4().hex[:8].upper()}",
+        "incidentId":            inc_id,
+        "dedupeKey":             incident_key,
+        "priority":              _map_priority(priority),
+        "actionTaken":           response.get("action_taken", action or "none"),
+        "actionStatus":          response.get("action_status", action_result.get("status", "unknown")),
+        "ipsActedOn":            response.get("ips_acted_on", action_result.get("ips_acted_on", [])),
+        "report":                response.get("report", "No report generated."),
+        "timestamp":             response.get("timestamp", now),
+        "pipelineSteps":         response.get("pipeline_steps", []),
+        "requiresHumanApproval": bool(decision.get("requires_human")),
+    }
+    response_actions = []
+    pending_action_contexts = {}
+
+    if action and action != "rejected" and action_result.get("executed"):
+        for ex in action_result.get("executed", []):
+            action_identity = _dedupe_key([incident_key, action_key, ex.get("ip", "unknown")])
+            response_actions.append({
+                "id":                    _stable_id("RA", action_identity),
+                "dedupeKey":             action_identity,
+                "action":                action.replace("_", " ").title(),
+                "target":                ex.get("ip", "unknown"),
+                "riskLevel":             _action_risk(action),
+                "explanation":           ex.get("detail", ""),
+                "status":                "executed" if ex.get("status") == "executed" else "pending",
+                "suggestedBy":           "Response Agent",
+                "incidentId":            inc_id,
+                "actionStatus":          action_result.get("status", "unknown"),
+                "pipelineSteps":         response.get("pipeline_steps", []),
+                "priority":              _map_priority(priority),
+                "report":                response.get("report", "No report generated."),
+                "requiresHumanApproval": False,
+                "timestamp":             response.get("timestamp", now),
+            })
+    elif action and action != "rejected" and decision.get("requires_human"):
+        targets = decision.get("ips_to_act_on") or src_ips or ["unknown"]
+        for target in targets:
+            action_identity = _dedupe_key([incident_key, action_key, target])
+            action_id = _stable_id("RA", action_identity)
+            response_actions.append({
+                "id":                    action_id,
+                "dedupeKey":             action_identity,
+                "action":                action.replace("_", " ").title(),
+                "target":                target,
+                "riskLevel":             _action_risk(action),
+                "explanation":           decision.get("reasoning", "Awaiting analyst approval"),
+                "status":                "pending",
+                "suggestedBy":           "Response Agent",
+                "incidentId":            inc_id,
+                "actionStatus":          "pending_human_review",
+                "pipelineSteps":         response.get("pipeline_steps", []),
+                "priority":              _map_priority(priority),
+                "report":                response.get("report", "No report generated."),
+                "requiresHumanApproval": True,
+                "timestamp":             response.get("timestamp", now),
+            })
+            pending_action_contexts[action_id] = {
+                "action": action,
+                "incident_id": inc_id,
+                "priority": priority,
+                "reasoning": decision.get("reasoning", ""),
+                "report": response.get("report", "No report generated."),
+                "response_id": response_payload["id"],
+                "target_ip": target,
+                "pipeline_steps": response.get("pipeline_steps", []),
+            }
 
     # ── Memory entries — from REAL long-term SQLite history ───────────────────
     memory_entries = _map_memory_entries(memory_ctx, attack)
@@ -221,15 +315,18 @@ def _shape(state: dict, raw_events: list) -> dict:
             inc_id, incident["title"], tactic, priority,
             decision, action_result, src_ips, now
         )
+        mission["dedupeKey"] = incident_key
 
     return {
         "alerts":           alerts,
         "incident":         incident,
         "agents":           agents,
+        "response":         response_payload,
         "response_actions": response_actions,
         "memory_entries":   memory_entries,
         "mission":          mission,          # None if no human review needed
         "raw_response":     response,
+        "_pending_action_contexts": pending_action_contexts,
         # Internal context passed to GameStore.apply_pipeline_result()
         "_memory_ctx":      memory_ctx,
         "_threat_ctx":      threat_intel,

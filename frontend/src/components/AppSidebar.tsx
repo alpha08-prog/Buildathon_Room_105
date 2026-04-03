@@ -12,7 +12,7 @@ import { StreakFlame } from '@/components/animations/StreakFlame';
 const navItems = [
   { path: '/dashboard',             label: 'Command Center', icon: LayoutDashboard, section: 'main' },
   { path: '/missions',              label: 'Missions',       icon: Swords,          section: 'main', badge: 'active' },
-  { path: '/incidents/INC-001',     label: 'Investigations', icon: Shield,          section: 'main' },
+  { path: '/incidents',             label: 'Investigations', icon: Shield,          section: 'main' },
   { path: '/squad',                 label: 'Squad',          icon: Users,           section: 'ops' },
   { path: '/agents',                label: 'AI Agents',      icon: Bot,             section: 'ops' },
   { path: '/response',              label: 'Response Center',icon: Crosshair,       section: 'ops' },
@@ -22,10 +22,11 @@ const navItems = [
 export function AppSidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-  const { gameState, missions, notifications } = useStore();
+  const { gameState, incidents, missions, notifications } = useStore();
 
   const activeMissionCount = missions.filter((m) => m.status === 'active').length;
   const bossMissionCount   = missions.filter((m) => m.status === 'active' && m.bossFight).length;
+  const investigationPath = incidents[0] ? `/incidents/${incidents[0].id}` : '/dashboard';
 
   const sections = [
     { key: 'main',  label: 'Operations' },
@@ -119,6 +120,7 @@ export function AppSidebar() {
 
               <div className="space-y-0.5">
                 {sectionItems.map((item) => {
+                  const path = item.path === '/incidents' ? investigationPath : item.path;
                   const isActive = location.pathname.startsWith(item.path.split('/').slice(0, 2).join('/'));
                   const isMission = item.path === '/missions';
                   const hasBoss = isMission && bossMissionCount > 0;
@@ -126,7 +128,7 @@ export function AppSidebar() {
                   return (
                     <Link
                       key={item.path}
-                      to={item.path}
+                      to={path}
                       className={cn(
                         'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 relative group',
                         isActive
