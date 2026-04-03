@@ -1,4 +1,4 @@
-MODEL        = "gemini-2.5-flash"
+MODEL        = "gemini-1.5-flash"
 TOKEN_BUDGET = 4000
 
 # MITRE ATT&CK quick-lookup: alert type → (technique_id, tactic, technique_name)

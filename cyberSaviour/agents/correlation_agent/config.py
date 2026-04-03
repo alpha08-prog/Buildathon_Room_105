@@ -1,4 +1,4 @@
-MODEL          = "gemini-2.5-flash"
+MODEL          = "gemini-1.5-flash"
 TOKEN_BUDGET   = 3000 
 WINDOW_SECONDS = 60  
 SCORE_THRESHOLDS = {

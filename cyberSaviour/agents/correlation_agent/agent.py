@@ -86,7 +86,15 @@ class CorrelationAgent(Body):
         try:
             llm_response = deployLLM(MODEL, filled_prompt)
         except Exception as e:
-            llm_response = f"LLM call failed: {e}"
+            # Rule-based fallback: produce meaningful analysis without LLM
+            top_ip = max(self._ip_buckets, key=lambda ip: self._score_ip(ip), default="unknown")
+            top_score = self._score_ip(top_ip)
+            severity = self._classify_severity(top_score)
+            llm_response = (
+                f"[Rule-based analysis] Detected {len(self._ip_buckets)} suspicious IP(s). "
+                f"Highest threat: {top_ip} (score={top_score}, severity={severity}). "
+                f"Summary: {summary}"
+            )
 
         from collections import defaultdict as _dd
         def _type_counts(entries):

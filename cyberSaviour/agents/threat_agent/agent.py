@@ -50,7 +50,12 @@ class ThreatAgent(Body):
         try:
             llm_response = deployLLM(MODEL, filled_prompt)
         except Exception as e:
-            llm_response = f"LLM call failed: {e}"
+            # Rule-based fallback: build threat description from MITRE anchor
+            llm_response = (
+                f"[Rule-based enrichment] MITRE {mitre_id}: {technique} ({tactic}). "
+                f"Observed across {len(scored_ips)} IP(s). "
+                f"Recommended action: isolate affected hosts and review authentication logs."
+            )
 
         threat_intel = {
             "mitre_anchor": {

@@ -1,4 +1,4 @@
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-1.5-flash"
 
 # Severities that always require human approval
 HUMAN_REQUIRED_SEVERITIES = {"critical", "high"}

@@ -14,7 +14,16 @@
       "Bash(/c/Users/agraw/miniconda3/python.exe -c \"from dotenv import load_dotenv; import os; load_dotenv\\(\\); print\\(''API key set:'', bool\\(os.getenv\\(''API''\\)\\)\\)\")",
       "Bash(/c/Users/agraw/miniconda3/python.exe -c \"from server.app import app; print\\(''Backend imports OK''\\)\")",
       "Bash(/c/Users/agraw/miniconda3/Scripts/uvicorn.exe --version)",
-      "Bash(/c/Users/agraw/miniconda3/python.exe -m uvicorn --version)"
+      "Bash(/c/Users/agraw/miniconda3/python.exe -m uvicorn --version)",
+      "Bash(PYTHONUTF8=1 /c/Users/agraw/miniconda3/python.exe -X utf8 main.py)",
+      "Bash(curl -s http://localhost:8000/api/alerts)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f''''count={d[\"\"count\"\"]}''''\\)\")",
+      "Bash(curl -s http://localhost:8000/api/incidents)",
+      "Bash(curl -s http://localhost:8000/api/agents)",
+      "Bash(curl -s http://localhost:8000/api/missions)",
+      "Bash(curl -s http://localhost:8000/api/game-state)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); gs=d.get\\(''''state'''',{}\\); print\\(f''''level={gs.get\\(\"\"level\"\"\\)}, xp={gs.get\\(\"\"xp\"\"\\)}, rank={gs.get\\(\"\"rank\"\"\\)}''''\\)\")",
+      "Bash(curl -s -X POST http://localhost:8000/api/pipeline/run -H \"Content-Type: application/json\" -d '{\"\"events\"\":[{\"\"source_ip\"\":\"\"192.168.1.5\"\",\"\"event_type\"\":\"\"failed_login\"\",\"\"raw\"\":\"\"Failed password from 192.168.1.5\"\",\"\"protocol\"\":null},{\"\"source_ip\"\":\"\"192.168.1.5\"\",\"\"event_type\"\":\"\"failed_login\"\",\"\"raw\"\":\"\"Failed password from 192.168.1.5\"\",\"\"protocol\"\":null},{\"\"source_ip\"\":\"\"192.168.1.1\"\",\"\"event_type\"\":\"\"web_request\"\",\"\"raw\"\":\"\"GET /login?id=1 or 1=1--\"\",\"\"protocol\"\":null}]}')"
     ]
   }
 }
