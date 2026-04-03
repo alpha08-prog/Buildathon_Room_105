@@ -1,85 +1,157 @@
-# Generative AI for SOCs
+# CyberSaviour
 
-`Generative AI for SOCs` is an agentic Security Operations Center prototype that combines:
+CyberSaviour is a gamified, agent-driven Security Operations Center prototype built around a Python backend and a React frontend. It ingests security events, runs them through a multi-stage analysis pipeline, and turns the result into alerts, incidents, missions, response actions, memory entries, and live dashboard updates.
 
-- a Python-based ingestion and detection pipeline
-- a React/Vite frontend for investigation and response workflows
-- an emerging multi-agent architecture for alerting, correlation, memory, and response
-- a planned gamified analyst experience built on top of real SOC actions
+This repository also includes two connected cyber-security backends:
 
-The current repo already has the right product shape:
+- `Cybersleuth_Forensic_Agent` for benchmark-driven PCAP forensic analysis
+- `CybORG` for cyber-range simulation experiments
 
-- live-style ingestion from web, system, alert, and network sources
-- rule-based alert extraction
-- incident, response, agent, and memory views in the frontend
-- a strong cyber-ops visual identity that can support a high-energy gamified layer
+In the main application, both are exposed through the `cyberSaviour` backend so they can be used from the frontend and the API.
 
-The next step is to turn this into a real-time, game-like SOC command center where the analyst handles missions, attack waves, squad agents, boss incidents, and response decisions driven by model outputs.
+## Contents
 
-## Repository structure
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Architecture](#architecture)
+- [Repository Layout](#repository-layout)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Running Main Workflows](#running-main-workflows)
+- [API Overview](#api-overview)
+- [Development Commands](#development-commands)
+- [Troubleshooting](#troubleshooting)
+- [Typical Data Flow](#typical-data-flow)
+- [Current Limitations](#current-limitations)
+- [Roadmap](#roadmap)
+
+## Overview
+
+CyberSaviour brings together:
+
+- a FastAPI backend for pipeline execution, state handling, and live updates
+- a React + Vite frontend for dashboard, incident, response, forensic, and simulation views
+- a multi-agent pipeline for log triage, correlation, threat reasoning, memory, decisioning, and response shaping
+- a game layer that translates security outcomes into missions, XP, achievements, and squad-style workflows
+
+The project is designed to feel like a SOC command center rather than a plain alert dashboard. Real pipeline outputs drive the missions, investigations, and analyst actions shown in the UI.
+
+## Key Features
+
+- Event-to-incident pipeline that turns raw events into frontend-ready SOC entities
+- Live WebSocket sync between backend state and the frontend
+- Response approval workflow for human-in-the-loop actions
+- Forensic analysis of PCAP benchmark events through the integrated Cybersleuth bridge
+- CybORG scenario execution through an adapter exposed in the main backend
+- Mission, XP, and achievement systems layered on top of security workflows
+- Optional Rust orchestrator for pipeline execution outside the main API process
+
+## Architecture
+
+### Main application
+
+The main product lives in two folders:
+
+- `cyberSaviour/`
+  Python backend, pipeline logic, integrations, memory layer, and API server
+- `frontend/`
+  React application for the operator interface
+
+### Backend pipeline
+
+The backend pipeline currently runs through these stages:
+
+1. `LogAgent`
+   Detects suspicious patterns from incoming events
+2. `CorrelationAgent`
+   Correlates security context into incidents
+3. `ThreatAgent`
+   Adds MITRE-like threat framing and response context
+4. `MemoryLayer`
+   Adds historical and retrieval-style context
+5. `DecisionLayer`
+   Chooses a response path
+6. `HumanInLoop`
+   Marks actions that need approval
+7. `ActionLayer`
+   Shapes the execution result
+8. `ReportAgent`
+   Produces report content
+9. `ResponseAgent`
+   Produces the frontend-facing response payload
+
+The shaping step that maps internal pipeline state into frontend objects is handled in `cyberSaviour/server/pipeline_bridge.py`.
+
+### Integrated external modules
+
+#### Cybersleuth forensic integration
+
+`cyberSaviour/integrations/cybersleuth_bridge.py` analyzes benchmark PCAP files from `Cybersleuth_Forensic_Agent`, extracts metadata with Scapy, adds CVE and service context, and returns CyberSaviour-compatible events and forensic summaries.
+
+#### CybORG integration
+
+`cyberSaviour/integrations/cyborg_bridge.py` exposes CybORG-style scenarios through the main app. In the current integrated mode, it uses a built-in scenario simulator that mirrors the main CybORG scenarios and emits CyberSaviour pipeline events.
+
+This is intentional: the integrated bridge notes that real CybORG runtime dependencies currently conflict with the backend's `numpy`-based stack.
+
+### Frontend surfaces
+
+The frontend includes pages for:
+
+- dashboard / command center
+- missions and mission briefing
+- incident investigation
+- AI agents
+- response center
+- codex / memory
+- CybORG simulation
+- forensic analysis
+
+## Repository Layout
 
 ```text
 .
 |-- cyberSaviour/
-|   |-- agents/
-|   |   |-- god/
-|   |   |-- logAgent/
-|   |   `-- correlation_agent/
-|   `-- ingestion/
+|   |-- agents/              # Pipeline agents
+|   |-- ingestion/           # Log / packet ingestion utilities
+|   |-- integrations/        # Cybersleuth + CybORG bridges
+|   |-- memory/              # Memory layer
+|   |-- orchestrator/        # Optional Rust orchestrator
+|   |-- pipeline/            # Decision / action / review pipeline pieces
+|   `-- server/              # FastAPI app and API endpoints
 |-- frontend/
-|   `-- src/
-|       |-- components/
-|       |-- data/
-|       |-- pages/
-|       `-- store/
+|   |-- src/components/      # Shared UI and animation components
+|   |-- src/pages/           # Main app pages
+|   |-- src/store/           # Zustand store
+|   `-- package.json
+|-- Cybersleuth_Forensic_Agent/
+|   |-- data/                # Benchmark PCAPs and tasks
+|   |-- src/                 # Standalone forensic agent code
+|   `-- README.md
+|-- CybORG/
+|   |-- CybORG/              # Upstream simulator package
+|   |-- demo.py
+|   `-- README.md
 |-- docs/
-|-- requirements.txt
+|-- requirements.txt         # Root Python dependencies for the main app
 `-- README.md
 ```
 
-## Current architecture
-
-### Backend
-
-The backend is centered around event ingestion and agent processing.
-
-- `cyberSaviour/ingestion/live.py`
-  Watches log directories and captures network packets from an interface.
-- `cyberSaviour/ingestion/parse.py`
-  Normalizes raw data into a common event shape.
-- `cyberSaviour/ingestion/ingest.py`
-  Pushes normalized events into a queue for downstream processing.
-- `cyberSaviour/agents/logAgent/agent.py`
-  Performs lightweight rule-based detection and emits alerts.
-- `cyberSaviour/agents/correlation_agent/agent.py`
-  Intended to correlate alerts/events into incidents, but currently only exists as a stub.
-- `cyberSaviour/agents/god/llm.py`
-  Thin wrapper around a Gemini model call.
-
-### Frontend
-
-The frontend already has the product surfaces needed for a gamified SOC experience.
-
-- `Dashboard`
-  Real-time threat overview, alert stream, charts, attack visualization.
-- `Incident Investigation`
-  Attack chain view, summary, timeline, evidence.
-- `AI Agents`
-  Agent activity and reasoning panel.
-- `Response Center`
-  Analyst approval workflow for suggested actions.
-- `Memory`
-  Retrieval-style view over past incidents and similar cases.
-
-## Tech stack
+## Tech Stack
 
 ### Backend
 
 - Python
-- `watchdog` for file monitoring
-- `pyshark` / `scapy` for network-related ingestion
-- `google-genai` for model access
-- `pydantic`, `pandas`, `numpy`, `PyYAML`
+- FastAPI
+- Uvicorn
+- Pydantic
+- Scapy
+- PyShark
+- Pandas
+- NumPy
+- Google GenAI client
 
 ### Frontend
 
@@ -87,451 +159,390 @@ The frontend already has the product surfaces needed for a gamified SOC experien
 - TypeScript
 - Vite
 - Tailwind CSS
-- Framer Motion
-- Zustand
 - React Query
+- Zustand
+- Framer Motion
 - Recharts
 - D3
-- shadcn/ui + Radix
+- Radix UI / shadcn-style components
 
-## Product vision
+### Optional components
 
-The frontend should evolve from a dashboard demo into a gamified SOC control room.
+- Rust orchestrator in `cyberSaviour/orchestrator`
+- standalone Cybersleuth forensic agent
+- standalone CybORG package
 
-### Recommended gamification layer
+## Prerequisites
 
-- Incidents become missions with phases such as Initial Access, Discovery, Lateral Movement, Containment, and Recovery.
-- Major attacks become boss fights with visible progress, urgency, and branching consequences.
-- Agents become squad members with specialties, trust, cooldowns, and unlockable upgrades.
-- Response decisions create score multipliers, streaks, XP, and mission outcomes.
-- Memory becomes a codex of unlocked tactics, prior campaigns, and reusable playbooks.
-- The dashboard becomes a live command screen with threat momentum, defense score, active objectives, and cinematic alerting.
+Before running the project, make sure you have:
 
-This gamified layer should not be cosmetic only. It should be driven by real model outputs and real event/state transitions.
+- Python installed and available on your PATH
+- `pip`
+- Node.js and `npm`
+- PowerShell or another terminal
 
-## Data ingestion today
+Recommended:
 
-The backend currently ingests four main source types:
+- a virtual environment for Python dependencies
+- a recent Node.js version for the frontend
 
-### 1. Web logs
+## Quick Start
 
-Source path:
+### 1. Clone the repository
 
-- `logs/web`
+```powershell
+git clone <your-repo-url>
+cd Buildathon_Room_105
+```
 
-Example raw input:
+### 2. Set up the Python backend
+
+From the repository root:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pip install fastapi uvicorn
+```
+
+Why the extra install?
+
+- The backend is built around FastAPI and Uvicorn.
+- The current root `requirements.txt` does not explicitly include those two packages, so installing them ensures the API server can start.
+
+### 3. Configure the backend environment
+
+Create or update `cyberSaviour/.env` with your Google / Gemini API key:
+
+```env
+API=your_api_key_here
+```
+
+This key is used by `cyberSaviour/agents/god/llm.py`.
+
+Do not commit real API keys to version control.
+
+### 4. Start the backend
+
+```powershell
+cd cyberSaviour
+uvicorn server.app:app --reload --port 8000
+```
+
+The backend will be available at:
+
+- `http://localhost:8000`
+
+### 5. Start the frontend
+
+In a new terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend will be available at:
+
+- `http://localhost:8080`
+
+### 6. Open the application
+
+Useful routes:
+
+- `http://localhost:8080/dashboard`
+- `http://localhost:8080/cyborg`
+- `http://localhost:8080/forensic`
+- `http://localhost:8080/response`
+- `http://localhost:8080/missions`
+
+## Configuration
+
+### Backend config
+
+The main backend currently reads this environment variable:
+
+- `API`
+  Google / Gemini API key used by the LLM wrapper in `cyberSaviour/agents/god/llm.py`
+
+### Frontend config
+
+The frontend uses:
+
+- `VITE_API_BASE_URL`
+
+If not set, it defaults to:
 
 ```text
-192.168.1.1 GET /login?id=1
+http://localhost:8000
 ```
 
-Normalized fields produced:
+You can create a frontend `.env` file such as:
 
-```json
-{
-  "timestamp": null,
-  "source_ip": "192.168.1.1",
-  "destination_ip": null,
-  "event_type": "web_request",
-  "protocol": null,
-  "data": {
-    "method": "GET",
-    "url": "192.168.1.1 GET /login?id=1"
-  },
-  "raw": "192.168.1.1 GET /login?id=1"
-}
+```env
+VITE_API_BASE_URL=http://localhost:8000
 ```
 
-### 2. System/authentication logs
+## Running Main Workflows
 
-Source path:
+### 1. Run a demo pipeline from the backend
 
-- `logs/system`
+You can POST a set of events directly to the pipeline:
 
-Example raw input:
-
-```text
-Failed password from 192.168.1.5
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri http://localhost:8000/api/pipeline/run `
+  -ContentType "application/json" `
+  -Body '{"events":[{"source_ip":"192.168.1.5","event_type":"failed_login","protocol":null,"raw":"Failed password from 192.168.1.5"}]}'
 ```
 
-Normalized fields produced:
+### 2. Run a CybORG scenario from the main app
 
-```json
-{
-  "timestamp": null,
-  "source_ip": "192.168.1.5",
-  "destination_ip": null,
-  "event_type": "failed_login",
-  "protocol": null,
-  "data": {
-    "message": "Failed password from 192.168.1.5"
-  },
-  "raw": "Failed password from 192.168.1.5"
-}
+List available scenarios:
+
+```powershell
+Invoke-RestMethod http://localhost:8000/api/cyborg/scenarios
 ```
 
-### 3. Alert feed JSON
+Run a scenario:
 
-Source path:
-
-- `logs/alerts`
-
-Example raw input:
-
-```json
-{"severity":"high","source_ip":"192.168.1.10"}
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri http://localhost:8000/api/cyborg/run-scenario `
+  -ContentType "application/json" `
+  -Body '{"scenario_name":"Scenario1","num_steps":20}'
 ```
 
-Normalized fields produced:
+You can also run this flow from the frontend at `/cyborg`.
 
-```json
-{
-  "timestamp": null,
-  "source_ip": "192.168.1.10",
-  "destination_ip": null,
-  "event_type": "alert",
-  "protocol": null,
-  "data": {
-    "severity": "high",
-    "source_ip": "192.168.1.10"
-  },
-  "raw": "{\"severity\":\"high\",\"source_ip\":\"192.168.1.10\"}"
-}
+### 3. Run a forensic analysis from the main app
+
+List available benchmark events:
+
+```powershell
+Invoke-RestMethod http://localhost:8000/api/forensic/events?benchmark=CFA
 ```
 
-### 4. Live network packets
+Analyze a benchmark event:
 
-Source:
-
-- a live network interface, currently configured as `wlan0`
-
-Normalized fields produced:
-
-```json
-{
-  "timestamp": "2026-04-02T12:34:56",
-  "source_ip": "10.0.0.5",
-  "destination_ip": "8.8.8.8",
-  "protocol": "TCP",
-  "event_type": "network",
-  "data": {},
-  "raw": "<packet object>"
-}
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri http://localhost:8000/api/forensic/analyze `
+  -ContentType "application/json" `
+  -Body '{"event_id":"0","benchmark":"CFA"}'
 ```
 
-## Current backend event contract
+You can also run this flow from the frontend at `/forensic`.
 
-All normalized events should follow this common envelope:
+### 4. Reset demo state
 
-```json
-{
-  "timestamp": "string | null",
-  "source_ip": "string | null",
-  "destination_ip": "string | null",
-  "event_type": "string",
-  "protocol": "string | null",
-  "data": {},
-  "raw": "any"
-}
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri http://localhost:8000/api/demo/reset `
+  -ContentType "application/json" `
+  -Body '{}'
 ```
 
-## Model input design
+This clears in-memory alerts, incidents, missions, responses, and the game layer state.
 
-To make the models useful for both security workflows and the planned gamified frontend, define the model-facing inputs in layers.
+## API Overview
 
-### Layer 1: Raw event input
+The main API server is implemented in `cyberSaviour/server/app.py`.
 
-This is the lowest-level input that arrives from ingestion.
+### Health and state
 
-```json
-{
-  "event_id": "evt-123",
-  "timestamp": "2026-04-02T12:34:56Z",
-  "source_type": "web | system | alert | network",
-  "source_ip": "10.0.0.5",
-  "destination_ip": "8.8.8.8",
-  "protocol": "TCP",
-  "event_type": "failed_login",
-  "data": {},
-  "raw": "original raw payload"
-}
+- `GET /health`
+- `GET /api/game-state`
+- `GET /api/achievements`
+- `GET /api/missions`
+- `GET /api/alerts`
+- `GET /api/incidents`
+- `GET /api/agents`
+- `GET /api/response-actions`
+- `GET /api/memory`
+- `GET /api/responses`
+- `POST /api/demo/reset`
+
+### Pipeline execution
+
+- `POST /api/pipeline/run`
+- `POST /api/pipeline/result`
+
+### Human approval
+
+- `POST /api/response-actions/{action_id}/decision`
+- `POST /api/missions/{mission_id}/complete`
+
+### CybORG integration
+
+- `GET /api/cyborg/scenarios`
+- `POST /api/cyborg/run-scenario`
+
+### Forensic integration
+
+- `GET /api/forensic/events`
+- `POST /api/forensic/analyze`
+
+### Realtime channel
+
+- `WS /ws`
+
+The frontend uses this WebSocket connection to receive state and pipeline updates.
+
+## Development Commands
+
+### Backend
+
+```powershell
+cd cyberSaviour
+uvicorn server.app:app --reload --port 8000
 ```
 
-Use this input for:
+### Frontend
 
-- event classification
-- severity estimation
-- MITRE mapping
-- IOC extraction
-- short explanations
-
-### Layer 2: Correlation window input
-
-This is the key input for your correlation and incident-generation models.
-
-```json
-{
-  "window_id": "win-001",
-  "window_seconds": 300,
-  "events": [],
-  "alerts": [],
-  "entities": {
-    "ips": [],
-    "hosts": [],
-    "users": [],
-    "processes": [],
-    "urls": [],
-    "domains": []
-  },
-  "historical_matches": [],
-  "active_incidents": []
-}
+```powershell
+cd frontend
+npm install
+npm run dev
+npm run build
+npm run lint
+npm run test
 ```
 
-Use this input for:
+### Optional Rust orchestrator
 
-- grouping alerts into incidents
-- building attack chains
-- identifying campaign phases
-- estimating escalation risk
-- generating recommended actions
+The Rust orchestrator can be found in `cyberSaviour/orchestrator`.
 
-### Layer 3: Incident state input
+Example commands:
 
-This is what should drive the investigation screen and mission progression.
-
-```json
-{
-  "incident_id": "INC-001",
-  "title": "Possible lateral movement campaign",
-  "severity": "critical",
-  "status": "investigating",
-  "attack_type": "Lateral Movement",
-  "timeline": [],
-  "affected_systems": [],
-  "entities": {
-    "users": [],
-    "hosts": [],
-    "ips": []
-  },
-  "evidence": [],
-  "response_candidates": [],
-  "memory_matches": []
-}
+```powershell
+cd cyberSaviour\orchestrator
+cargo build
+cargo run
 ```
 
-Use this input for:
+Its job is to run pipeline work and POST shaped results back to the backend through `/api/pipeline/result`.
 
-- incident summaries
-- investigation guidance
-- next-best-action suggestions
-- mission phase generation
-- boss-fight style progression states
+### Standalone Cybersleuth forensic agent
 
-### Layer 4: Frontend gameplay state input
+If you want to run the forensic project independently of the main app:
 
-This layer is not ingested from logs. It is generated by the frontend and should be sent back to models if you want a truly gamified system.
-
-```json
-{
-  "user_id": "analyst-01",
-  "session_id": "sess-001",
-  "active_missions": [],
-  "current_incident_id": "INC-001",
-  "squad_state": {
-    "selected_agents": [],
-    "cooldowns": {},
-    "trust_levels": {}
-  },
-  "analyst_actions": [
-    {
-      "timestamp": "2026-04-02T12:40:00Z",
-      "action_type": "approve_response",
-      "target_id": "RA-001",
-      "latency_ms": 4200
-    }
-  ],
-  "score_state": {
-    "xp": 240,
-    "streak": 4,
-    "combo_multiplier": 2,
-    "rank": "Tier-2 Analyst"
-  }
-}
+```powershell
+cd Cybersleuth_Forensic_Agent
+py -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+cd src
+Copy-Item .env_example .env
+python run_agent.py
 ```
 
-Use this input for:
+This standalone mode is separate from the lighter-weight integrated bridge used by CyberSaviour.
 
-- adaptive mission difficulty
-- achievement generation
-- squad commentary
-- dynamic challenge pacing
-- personalized coaching and debriefs
+### Standalone CybORG
 
-## Recommended model outputs
+If you want to run the CybORG package independently:
 
-Your models should return strict structured data, not only prose.
-
-### 1. Triage output
-
-```json
-{
-  "severity": "critical",
-  "confidence": 0.94,
-  "summary": "Brute-force authentication behavior detected",
-  "mitre_ids": ["T1110"],
-  "tags": ["auth", "bruteforce"],
-  "entities": {
-    "ips": ["192.168.1.5"],
-    "users": [],
-    "hosts": []
-  },
-  "evidence": []
-}
+```powershell
+cd CybORG
+py -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r Requirements.txt
+pip install -e .
+python demo.py
 ```
 
-### 2. Correlation output
+## Troubleshooting
 
-```json
-{
-  "incident_id": "INC-001",
-  "campaign_name": "Northbound Lateral Movement",
-  "phase": "Lateral Movement",
-  "confidence": 0.87,
-  "timeline": [],
-  "graph_edges": [],
-  "affected_systems": [],
-  "recommended_actions": [],
-  "narrative_banner": "Threat wave escalating across core systems"
-}
+### `py` or `python` is not recognized
+
+Python is either not installed or not available on your PATH. Install Python first, then reopen the terminal and recreate the virtual environment.
+
+### Backend fails with missing `fastapi` or `uvicorn`
+
+Install them explicitly:
+
+```powershell
+pip install fastapi uvicorn
 ```
 
-### 3. Response output
+### Frontend cannot reach the backend
 
-```json
-{
-  "actions": [
-    {
-      "action": "Block IP",
-      "target": "185.220.101.34",
-      "risk_level": "low",
-      "reason": "Known C2 traffic source",
-      "requires_human_approval": true
-    }
-  ]
-}
-```
+Check that:
 
-### 4. Gamification output
+- the backend is running on `http://localhost:8000`
+- the frontend is using the correct `VITE_API_BASE_URL`
+- no other process is already using ports `8000` or `8080`
 
-```json
-{
-  "mission_type": "boss_incident",
-  "xp_reward": 120,
-  "combo_opportunity": true,
-  "achievement_candidate": "Cut The C2 Chain",
-  "agent_voice_line": "Correlation Agent has locked the attack path. Strike now."
-}
-```
+### Forensic analysis fails
 
-## Frontend inputs you should plan for
+Check that:
 
-If you want the models to support the frontend well, the frontend should eventually send these input categories:
+- `scapy` is installed in the active Python environment
+- the benchmark data exists under `Cybersleuth_Forensic_Agent/data`
+- `cyberSaviour/.env` contains a valid `API` key if you want LLM-generated narrative output
 
-- analyst action events
-  - opened incident
-  - viewed evidence
-  - approved or rejected response
-  - time taken to act
-  - switched agent view
-  - searched memory/codex
-- UI context
-  - current page
-  - selected incident
-  - selected mission
-  - filters and search state
-- game state
-  - XP
-  - streak
-  - rank
-  - unlocked achievements
-  - active objectives
-  - squad composition
-- outcome feedback
-  - whether a recommended action helped
-  - whether an alert became a real incident
-  - false positive / true positive confirmation
+If the LLM call fails, the integration is designed to fall back to a rule-based forensic report.
 
-## Suggested data contracts by product area
+### CybORG behavior does not match the upstream package
 
-### Dashboard
+That is expected in the integrated app. The main CyberSaviour backend uses a simulator adapter, not the full live CybORG runtime.
 
-Inputs needed:
+## Typical Data Flow
 
-- streaming alerts
-- threat counts by severity
-- active mission list
-- threat momentum over time
-- current squad/agent states
+### Standard pipeline flow
 
-### Incident Investigation
+1. Events enter the backend through ingestion or direct API calls.
+2. The pipeline processes them through detection, correlation, memory, decision, reporting, and response stages.
+3. `pipeline_bridge.py` maps the internal state to frontend-ready objects.
+4. The API stores the latest state in memory.
+5. The backend broadcasts updates over WebSocket.
+6. The frontend updates dashboards, missions, incidents, and response views in real time.
 
-Inputs needed:
+### Forensic flow
 
-- incident summary
-- correlated event timeline
-- attack graph nodes and edges
-- evidence snippets
-- phase progression
-- affected assets and entities
+1. A user selects a benchmark event from the forensic page.
+2. The backend calls the Cybersleuth bridge.
+3. The bridge analyzes the PCAP and generates forensic context.
+4. The resulting pipeline events are fed into the main CyberSaviour pipeline.
+5. The frontend receives both forensic metadata and the normal SOC pipeline result.
 
-### Response Center
+### CybORG flow
 
-Inputs needed:
+1. A user starts a scenario from the CybORG page.
+2. The CybORG bridge generates scenario events in CyberSaviour event format.
+3. Those events are processed by the main pipeline.
+4. The resulting incident, mission, and response data are shown in the same frontend used for the rest of the product.
 
-- recommended actions
-- risk level
-- confidence
-- human approval requirement
-- expected impact
-- action outcome after execution
+## Current Limitations
 
-### Memory / Codex
+- Most application state is stored in memory, so it resets when the backend restarts.
+- The pipeline is functional but still prototype-level; some agent stages are lighter than their final intended design.
+- The integrated CybORG mode uses a simulator adapter rather than the full upstream runtime.
+- The main backend depends on a Google / Gemini API key for LLM-backed report generation.
+- Some README and dependency behavior in the subprojects reflects their own upstream context rather than this unified app.
+- The root Python requirements currently do not include `fastapi` and `uvicorn`, so they should be installed explicitly.
 
-Inputs needed:
+## Roadmap
 
-- embeddings or similarity matches
-- past incident summaries
-- playbook resolution steps
-- reusable patterns and tags
+Planned next steps for the project include:
 
-## Immediate implementation priorities
+- persistent storage for incidents, missions, memory, and response history
+- stronger correlation and threat reasoning across event windows
+- more realistic orchestration between the agent stages
+- deeper integration of model outputs with game systems
+- richer mission progression, squad roles, and boss-incident mechanics
+- better evaluation and test coverage for both backend and frontend workflows
 
-Before the full gamified experience, the project should prioritize:
+## Summary
 
-1. finish the correlation agent
-2. expose backend data through APIs or sockets
-3. replace mock frontend data with live incident state
-4. formalize JSON schemas for model inputs and outputs
-5. add persistent storage for incidents, actions, memory, and gameplay state
+CyberSaviour is not just a UI demo and not just a collection of security scripts. It is a unified SOC prototype that combines event processing, cyber reasoning, simulations, forensic analysis, and a game-like operator experience in one codebase.
 
-## Development notes
+If you want the shortest path to seeing it work:
 
-- The frontend is currently the fastest place to prototype the mission, XP, squad, and boss-fight experience.
-- The backend needs a real correlation/orchestration layer before the gamified loop can be fully model-driven.
-- The best long-term path is to keep security reasoning and game-state generation as separate but connected model outputs.
-
-## Status
-
-Current state:
-
-- ingestion exists
-- basic alert extraction exists
-- frontend UX shell exists
-- correlation/orchestration is incomplete
-- most frontend data is mocked
-- model contracts are not yet formalized
-
-Target state:
-
-- real-time SOC gameplay powered by structured cyber events, correlation, memory retrieval, and explainable model-driven response recommendations
+1. start the backend from `cyberSaviour`
+2. start the frontend from `frontend`
+3. visit `/cyborg` or `/forensic`
+4. trigger a scenario or forensic run and watch the dashboard update
