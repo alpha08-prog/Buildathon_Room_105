@@ -22,7 +22,7 @@ import {
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { StatCard, GlassCard, SeverityBadge, StatusDot } from '@/components/ui/stat-card';
 import { useStore } from '@/store/useStore';
-import { threatChartData, mockAlerts, Alert } from '@/data/mockData';
+import { threatChartData, Alert } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { AttackGraph } from '@/components/AttackGraph';
 

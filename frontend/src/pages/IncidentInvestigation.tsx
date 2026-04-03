@@ -5,7 +5,8 @@ import * as d3 from 'd3';
 import { Clock, FileText, Brain, Shield } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { GlassCard, SeverityBadge, StatusDot } from '@/components/ui/stat-card';
-import { mockIncidents, attackGraphNodes, attackGraphEdges } from '@/data/mockData';
+import { attackGraphNodes, attackGraphEdges } from '@/data/mockData';
+import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 
 function AttackGraph() {
@@ -94,7 +95,8 @@ function AttackGraph() {
 
 export default function IncidentInvestigation() {
   const { id } = useParams();
-  const incident = mockIncidents.find((i) => i.id === id) || mockIncidents[0];
+  const { incidents } = useStore();
+  const incident = incidents.find((i) => i.id === id) || incidents[0];
 
   return (
     <DashboardLayout>

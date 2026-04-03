@@ -31,7 +31,11 @@ const WORKER_THREADS: usize = 4;
 
 const PYTHON_BIN:         &str = "/home/guy_who_likes_to_code/miniconda3/envs/dsp/bin/python";
 const INGESTION_SCRIPT:   &str = "orchestrator/ingestion_bridge.py";
-const PIPELINE_SCRIPT:    &str = "orchestrator/pipeline_worker.py";
+/// Uses the bridge worker that returns full frontend-shaped data.
+const PIPELINE_SCRIPT:    &str = "orchestrator/pipeline_bridge_worker.py";
+
+/// Base URL of the FastAPI SOC server.
+const SOC_SERVER_URL:     &str = "http://127.0.0.1:8000";
 
 /// Working directory for all subprocesses — must be cyberSaviour/ so that
 /// relative imports (agents/, pipeline/, memory/) resolve correctly.
@@ -74,7 +78,8 @@ fn start_ingestion(queue: Arc<BoundedQueue>, script: String) {
 // ── Worker pool ───────────────────────────────────────────────────────────────
 
 /// Spawns `WORKER_THREADS` threads.  Each waits for a window on the mpsc
-/// channel, spawns `pipeline_worker.py`, and prints the result.
+/// channel, spawns `pipeline_bridge_worker.py`, and pushes the result to
+/// the FastAPI SOC server.
 ///
 /// Returns a `Sender` the main loop uses to dispatch windows.
 fn start_worker_pool() -> mpsc::Sender<Vec<Event>> {
@@ -89,6 +94,7 @@ fn start_worker_pool() -> mpsc::Sender<Vec<Event>> {
                 python_bin:  PYTHON_BIN.to_string(),
                 script_path: PIPELINE_SCRIPT.to_string(),
                 working_dir: WORKING_DIR.to_string(),
+                server_url:  SOC_SERVER_URL.to_string(),
             };
 
             loop {
@@ -134,6 +140,7 @@ fn main() {
     println!("  Window size     : {WINDOW_SIZE} events / {WINDOW_TIMEOUT_SECS}s");
     println!("  Worker threads  : {WORKER_THREADS}");
     println!("  Ingestion bridge: {ingestion_script}");
+    println!("  SOC server      : {SOC_SERVER_URL}");
     println!();
 
     let queue    = Arc::new(BoundedQueue::new(QUEUE_CAPACITY));

@@ -209,6 +209,129 @@ export const mockMemoryEntries: MemoryEntry[] = [
   { id: 'MEM-006', incidentTitle: 'Insider Threat - Data Download', date: '2024-04-14', similarity: 0.71, attackType: 'Insider Threat', resolution: 'Account suspended, HR escalation', tags: ['insider', 'dlp', 'download'] },
 ];
 
+// ── Game / Achievement types ──────────────────────────────────────────────────
+
+export type MissionPhase = 'Initial Access' | 'Discovery' | 'Lateral Movement' | 'Containment' | 'Recovery';
+
+export interface MissionObjective {
+  id: string;
+  description: string;
+  completed: boolean;
+  xpBonus: number;
+}
+
+export interface Mission {
+  id: string;
+  incidentId: string;
+  title: string;
+  description: string;
+  phase: MissionPhase;
+  phaseProgress: number;
+  difficulty: 'easy' | 'normal' | 'hard' | 'nightmare';
+  xpReward: number;
+  bossFight: boolean;
+  status: 'active' | 'completed' | 'failed';
+  objectives: MissionObjective[];
+  squadVoiceLine?: string;
+  timeLimit?: number;
+  elapsed?: number;
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  icon: string;
+  xpReward: number;
+  unlockedAt: string | null;
+}
+
+export interface GameState {
+  level: number;
+  xp: number;
+  xpToNextLevel: number;
+  streak: number;
+  rank: string;
+}
+
+export interface SquadAbility {
+  id: string;
+  name: string;
+  description: string;
+  cooldown: number;
+  icon: string;
+}
+
+export interface SquadAgent {
+  id: string;
+  name: string;
+  role: string;
+  level: number;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  abilities: SquadAbility[];
+  portrait: string;
+  bio: string;
+}
+
+export const mockAchievements: Achievement[] = [
+  { id: 'ACH-001', name: 'First Blood', description: 'Resolve your first incident', rarity: 'common', icon: 'Shield', xpReward: 50, unlockedAt: '2024-12-10T10:00:00Z' },
+  { id: 'ACH-002', name: 'Threat Hunter', description: 'Identify 10 threats from raw logs', rarity: 'rare', icon: 'Search', xpReward: 200, unlockedAt: '2024-12-12T14:30:00Z' },
+  { id: 'ACH-003', name: 'Brute Force Buster', description: 'Block a brute force campaign', rarity: 'common', icon: 'ShieldCheck', xpReward: 75, unlockedAt: '2024-12-14T09:15:00Z' },
+  { id: 'ACH-004', name: 'APT Slayer', description: 'Contain an advanced persistent threat', rarity: 'epic', icon: 'Sword', xpReward: 500, unlockedAt: null },
+  { id: 'ACH-005', name: 'Zero-Day Hero', description: 'Detect and respond to a zero-day exploit', rarity: 'legendary', icon: 'Zap', xpReward: 1000, unlockedAt: null },
+  { id: 'ACH-006', name: 'Lateral Stopper', description: 'Block lateral movement across 3 systems', rarity: 'rare', icon: 'Network', xpReward: 250, unlockedAt: null },
+];
+
+export const mockGameState: GameState = {
+  level: 3,
+  xp: 425,
+  xpToNextLevel: 3000,
+  streak: 4,
+  rank: 'ANALYST',
+};
+
+export const mockMissions: Mission[] = [
+  {
+    id: 'MISS-001',
+    incidentId: 'INC-001',
+    title: 'Hunt the Lateral Mover',
+    description: 'Track and contain an attacker moving laterally through the network using stolen credentials.',
+    phase: 'Lateral Movement',
+    phaseProgress: 60,
+    difficulty: 'hard',
+    xpReward: 350,
+    bossFight: false,
+    status: 'active',
+    objectives: [
+      { id: 'O1', description: 'Identify source IP of initial compromise', completed: true, xpBonus: 50 },
+      { id: 'O2', description: 'Block lateral RDP sessions', completed: false, xpBonus: 100 },
+      { id: 'O3', description: 'Isolate compromised host WEB-03', completed: false, xpBonus: 150 },
+    ],
+    squadVoiceLine: 'The attacker is already inside — we need to cut them off before they reach the database.',
+  },
+  {
+    id: 'MISS-002',
+    incidentId: 'INC-002',
+    title: 'Ransomware: Pre-Detonation',
+    description: 'Stop the ransomware before it encrypts critical file servers.',
+    phase: 'Containment',
+    phaseProgress: 30,
+    difficulty: 'nightmare',
+    xpReward: 750,
+    bossFight: true,
+    status: 'active',
+    objectives: [
+      { id: 'O4', description: 'Terminate malicious PowerShell processes', completed: false, xpBonus: 100 },
+      { id: 'O5', description: 'Restore shadow copies', completed: false, xpBonus: 200 },
+      { id: 'O6', description: 'Re-enable Windows Defender', completed: false, xpBonus: 100 },
+    ],
+    squadVoiceLine: 'Clock is ticking. Shadow copies are already gone on FS-01.',
+    timeLimit: 600,
+    elapsed: 180,
+  },
+];
+
 export const threatChartData = [
   { time: '00:00', critical: 2, high: 5, medium: 8, low: 12 },
   { time: '04:00', critical: 1, high: 3, medium: 6, low: 10 },

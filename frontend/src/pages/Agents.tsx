@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Bot, FileSearch, Network, Shield, Zap } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { GlassCard, StatusDot } from '@/components/ui/stat-card';
-import { mockAgents } from '@/data/mockData';
+import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 
 const iconMap: Record<string, React.ElementType> = {
@@ -51,6 +51,7 @@ function AgentReasoningPanel({ reasoning }: { reasoning: string[] }) {
 }
 
 export default function AgentsPage() {
+  const { agents } = useStore();
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -60,7 +61,7 @@ export default function AgentsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {mockAgents.map((agent, i) => {
+          {agents.map((agent, i) => {
             const Icon = iconMap[agent.icon] || Bot;
             return (
               <motion.div
