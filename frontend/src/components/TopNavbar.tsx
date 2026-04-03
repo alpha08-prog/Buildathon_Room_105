@@ -4,7 +4,38 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function TopNavbar() {
-  const { simulationActive, toggleSimulation, notifications, clearNotifications } = useStore();
+  const {
+    backendError,
+    backendStatus,
+    clearNotifications,
+    lastSyncedAt,
+    notifications,
+    simulationActive,
+    toggleSimulation,
+  } = useStore();
+
+  const statusMeta =
+    backendStatus === 'connected'
+      ? {
+          color: 'bg-primary',
+          label: lastSyncedAt
+            ? `Backend Connected · ${new Date(lastSyncedAt).toLocaleTimeString()}`
+            : 'Backend Connected',
+        }
+      : backendStatus === 'connecting'
+        ? {
+            color: 'bg-warning animate-pulse',
+            label: 'Connecting to Backend',
+          }
+        : backendStatus === 'error'
+          ? {
+              color: 'bg-destructive',
+              label: backendError ? `Backend Offline · ${backendError}` : 'Backend Offline',
+            }
+          : {
+              color: 'bg-muted-foreground',
+              label: 'Mock Data Mode',
+            };
 
   return (
     <header className="h-14 border-b border-border/50 bg-card/40 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-30">
@@ -52,8 +83,8 @@ export function TopNavbar() {
 
         {/* Status */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-          All Systems Operational
+          <span className={cn('h-2 w-2 rounded-full', statusMeta.color)} />
+          <span>{statusMeta.label}</span>
         </div>
       </div>
     </header>

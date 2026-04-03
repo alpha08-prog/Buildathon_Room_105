@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep:*)",
+      "Bash(pip --version)",
+      "Bash(pip3 --version)",
+      "Bash(pip show:*)",
+      "Bash(pip install:*)",
+      "Bash(python -c \"from server.app import app; print\\(''Backend imports OK''\\)\")",
+      "Bash(python3 -c 'import fastapi')",
+      "Bash(pip3 show:*)",
+      "Bash(/c/Users/agraw/miniconda3/python.exe -c \"import fastapi; print\\(''''OK'''', fastapi.__version__\\)\")",
+      "Bash(/c/Users/agraw/miniconda3/python.exe -c \"from dotenv import load_dotenv; import os; load_dotenv\\(''/c/Users/agraw/Buildathon_Room_105/cyberSaviour/.env''\\); print\\(''API key set:'', bool\\(os.getenv\\(''API''\\)\\)\\)\")",
+      "Bash(/c/Users/agraw/miniconda3/python.exe -c \"from dotenv import load_dotenv; import os; load_dotenv\\(\\); print\\(''API key set:'', bool\\(os.getenv\\(''API''\\)\\)\\)\")",
+      "Bash(/c/Users/agraw/miniconda3/python.exe -c \"from server.app import app; print\\(''Backend imports OK''\\)\")",
+      "Bash(/c/Users/agraw/miniconda3/Scripts/uvicorn.exe --version)",
+      "Bash(/c/Users/agraw/miniconda3/python.exe -m uvicorn --version)"
+    ]
+  }
+}

@@ -2,16 +2,15 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy, Search, BookOpen, Tag, Calendar, ChevronRight,
-  Lock, Zap, Star,
+  Lock, Network, Shield, ShieldCheck, Star, UserX, Zap, Database,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { GlassCard } from '@/components/ui/stat-card';
 import { AchievementTrophy } from '@/components/3d/AchievementTrophy';
 import { useStore } from '@/store/useStore';
-import { mockMemoryEntries } from '@/data/mockData';
 import { cn } from '@/lib/utils';
-import type { Achievement } from '@/data/mockData';
+import type { Achievement, MemoryEntry } from '@/data/mockData';
 
 // ── Rarity config ────────────────────────────────────────────────────────────
 const RARITY_CONFIG = {
@@ -27,8 +26,19 @@ import {
 } from 'lucide-react';
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  Trophy: TrophyIcon, Zap: ZapIcon, Flame, ShieldOff, Ghost, BookOpen: BookOpenIcon,
-  Search: SearchIcon, Sword,
+  BookOpen: BookOpenIcon,
+  Database,
+  Flame,
+  Ghost,
+  Network,
+  Search: SearchIcon,
+  Shield,
+  ShieldCheck,
+  ShieldOff,
+  Sword,
+  Trophy: TrophyIcon,
+  UserX,
+  Zap: ZapIcon,
 };
 
 // ── Achievement Trophy Card ──────────────────────────────────────────────────
@@ -126,7 +136,7 @@ function AchievementCard({ achievement, index }: { achievement: Achievement; ind
 }
 
 // ── Campaign History Entry ────────────────────────────────────────────────────
-function CampaignEntry({ entry, index }: { entry: (typeof mockMemoryEntries)[0]; index: number }) {
+function CampaignEntry({ entry, index }: { entry: MemoryEntry; index: number }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -206,7 +216,7 @@ function CampaignEntry({ entry, index }: { entry: (typeof mockMemoryEntries)[0];
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function Codex() {
-  const { achievements, gameState } = useStore();
+  const { achievements, gameState, memoryEntries } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [tab, setTab] = useState<'trophies' | 'campaigns'>('trophies');
   const [rarityFilter, setRarityFilter] = useState<string>('all');
@@ -220,7 +230,7 @@ export default function Codex() {
     return matchSearch && matchRarity;
   });
 
-  const filteredCampaigns = mockMemoryEntries.filter((e) =>
+  const filteredCampaigns = memoryEntries.filter((e) =>
     searchQuery === '' ||
     e.incidentTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
     e.tags.some((t) => t.includes(searchQuery.toLowerCase()))
@@ -324,7 +334,7 @@ export default function Codex() {
             <motion.div key="campaigns" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
               {filteredCampaigns.map((e, i) => <CampaignEntry key={e.id} entry={e} index={i} />)}
               {filteredCampaigns.length === 0 && (
-                <div className="text-center py-16 text-muted-foreground">No campaigns match your search.</div>
+                <div className="text-center py-16 text-muted-foreground">No backend campaign history is available yet.</div>
               )}
             </motion.div>
           )}

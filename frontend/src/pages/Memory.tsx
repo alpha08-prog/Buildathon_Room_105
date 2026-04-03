@@ -2,13 +2,14 @@ import { motion } from 'framer-motion';
 import { Brain, Search, Tag } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { GlassCard } from '@/components/ui/stat-card';
-import { mockMemoryEntries } from '@/data/mockData';
+import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 export default function Memory() {
   const [search, setSearch] = useState('');
-  const filtered = mockMemoryEntries.filter(
+  const memoryEntries = useStore((state) => state.memoryEntries);
+  const filtered = memoryEntries.filter(
     (m) => m.incidentTitle.toLowerCase().includes(search.toLowerCase()) ||
            m.attackType.toLowerCase().includes(search.toLowerCase()) ||
            m.tags.some((t) => t.includes(search.toLowerCase()))
@@ -84,6 +85,11 @@ export default function Memory() {
               </GlassCard>
             </motion.div>
           ))}
+          {filtered.length === 0 && (
+            <GlassCard>
+              <p className="text-sm text-muted-foreground">No backend memory entries available yet.</p>
+            </GlassCard>
+          )}
         </div>
       </div>
     </DashboardLayout>
