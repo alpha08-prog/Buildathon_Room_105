@@ -9,6 +9,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { GlassCard } from '@/components/ui/stat-card';
 import { AchievementTrophy } from '@/components/3d/AchievementTrophy';
 import { useStore } from '@/store/useStore';
+import { mockMemoryEntries } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import type { Achievement } from '@/data/mockData';
 
@@ -125,7 +126,7 @@ function AchievementCard({ achievement, index }: { achievement: Achievement; ind
 }
 
 // ── Campaign History Entry ────────────────────────────────────────────────────
-function CampaignEntry({ entry, index }: { entry: import('@/data/mockData').MemoryEntry; index: number }) {
+function CampaignEntry({ entry, index }: { entry: (typeof mockMemoryEntries)[0]; index: number }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -205,7 +206,7 @@ function CampaignEntry({ entry, index }: { entry: import('@/data/mockData').Memo
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function Codex() {
-  const { achievements, gameState, memoryEntries } = useStore();
+  const { achievements, gameState } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [tab, setTab] = useState<'trophies' | 'campaigns'>('trophies');
   const [rarityFilter, setRarityFilter] = useState<string>('all');
@@ -219,7 +220,7 @@ export default function Codex() {
     return matchSearch && matchRarity;
   });
 
-  const filteredCampaigns = memoryEntries.filter((e) =>
+  const filteredCampaigns = mockMemoryEntries.filter((e) =>
     searchQuery === '' ||
     e.incidentTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
     e.tags.some((t) => t.includes(searchQuery.toLowerCase()))

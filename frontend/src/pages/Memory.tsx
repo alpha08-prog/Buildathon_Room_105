@@ -2,14 +2,13 @@ import { motion } from 'framer-motion';
 import { Brain, Search, Tag } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { GlassCard } from '@/components/ui/stat-card';
+import { mockMemoryEntries } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { useStore } from '@/store/useStore';
 
 export default function Memory() {
-  const { memoryEntries } = useStore();
   const [search, setSearch] = useState('');
-  const filtered = memoryEntries.filter(
+  const filtered = mockMemoryEntries.filter(
     (m) => m.incidentTitle.toLowerCase().includes(search.toLowerCase()) ||
            m.attackType.toLowerCase().includes(search.toLowerCase()) ||
            m.tags.some((t) => t.includes(search.toLowerCase()))
