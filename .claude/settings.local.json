@@ -23,7 +23,15 @@
       "Bash(curl -s http://localhost:8000/api/missions)",
       "Bash(curl -s http://localhost:8000/api/game-state)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); gs=d.get\\(''''state'''',{}\\); print\\(f''''level={gs.get\\(\"\"level\"\"\\)}, xp={gs.get\\(\"\"xp\"\"\\)}, rank={gs.get\\(\"\"rank\"\"\\)}''''\\)\")",
-      "Bash(curl -s -X POST http://localhost:8000/api/pipeline/run -H \"Content-Type: application/json\" -d '{\"\"events\"\":[{\"\"source_ip\"\":\"\"192.168.1.5\"\",\"\"event_type\"\":\"\"failed_login\"\",\"\"raw\"\":\"\"Failed password from 192.168.1.5\"\",\"\"protocol\"\":null},{\"\"source_ip\"\":\"\"192.168.1.5\"\",\"\"event_type\"\":\"\"failed_login\"\",\"\"raw\"\":\"\"Failed password from 192.168.1.5\"\",\"\"protocol\"\":null},{\"\"source_ip\"\":\"\"192.168.1.1\"\",\"\"event_type\"\":\"\"web_request\"\",\"\"raw\"\":\"\"GET /login?id=1 or 1=1--\"\",\"\"protocol\"\":null}]}')"
+      "Bash(curl -s -X POST http://localhost:8000/api/pipeline/run -H \"Content-Type: application/json\" -d '{\"\"events\"\":[{\"\"source_ip\"\":\"\"192.168.1.5\"\",\"\"event_type\"\":\"\"failed_login\"\",\"\"raw\"\":\"\"Failed password from 192.168.1.5\"\",\"\"protocol\"\":null},{\"\"source_ip\"\":\"\"192.168.1.5\"\",\"\"event_type\"\":\"\"failed_login\"\",\"\"raw\"\":\"\"Failed password from 192.168.1.5\"\",\"\"protocol\"\":null},{\"\"source_ip\"\":\"\"192.168.1.1\"\",\"\"event_type\"\":\"\"web_request\"\",\"\"raw\"\":\"\"GET /login?id=1 or 1=1--\"\",\"\"protocol\"\":null}]}')",
+      "Bash(find /c/Users/agraw/Buildathon_Room_105 -maxdepth 2 -name demo.py -o -name test*.py)",
+      "Bash(/c/Users/agraw/miniconda3/python.exe -c \"import sys; sys.path.insert\\(0, ''CybORG''\\); from CybORG import CybORG; print\\(''CybORG imported OK''\\)\")",
+      "Bash(/c/Users/agraw/miniconda3/python.exe -c \":*)",
+      "Bash(/c/Users/agraw/miniconda3/python.exe -m pip install gym==0.23.1 prettytable networkx)",
+      "Bash(/c/Users/agraw/miniconda3/python.exe -m pip install paramiko pettingzoo matplotlib)",
+      "Bash(curl -s http://localhost:8000/api/cyborg/scenarios)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(f\"\"  {s[''''name'''']} \\({s[''''difficulty'''']}\\) — {s[''''description''''][:60]}...\"\"\\) for s in d[''''scenarios'''']]\")",
+      "Bash(netstat -ano)"
     ]
   }
 }

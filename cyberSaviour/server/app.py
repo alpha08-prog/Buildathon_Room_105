@@ -421,6 +421,67 @@ async def ingest_pipeline_result(result: dict):
     }
 
 
+# ── CybORG Scenario Integration ───────────────────────────────────────────────
+
+@app.get("/api/cyborg/scenarios")
+async def get_cyborg_scenarios():
+    """List all available CybORG scenarios."""
+    from integrations.cyborg_bridge import list_scenarios
+    return {"scenarios": list_scenarios()}
+
+
+@app.post("/api/cyborg/run-scenario")
+async def run_cyborg_scenario(payload: dict):
+    """
+    Run a CybORG network simulation scenario and feed results through
+    the full CyberSaviour pipeline.
+
+    Body: { "scenario_name": str, "num_steps": int (default 20) }
+    """
+    scenario_name = payload.get("scenario_name", "Scenario1")
+    num_steps     = int(payload.get("num_steps", 20))
+
+    try:
+        from integrations.cyborg_bridge import run_cyborg_scenario as _run
+        cyborg_result = _run(scenario_name, num_steps)
+    except ValueError as e:
+        return JSONResponse(status_code=422, content={"detail": str(e)})
+    except Exception as e:
+        logger.error(f"CybORG scenario error: {e}")
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+    pipeline_events = cyborg_result["pipeline_events"]
+    if not pipeline_events:
+        return JSONResponse(status_code=422, content={"detail": "Scenario produced no events"})
+
+    try:
+        from .pipeline_bridge import run_pipeline
+    except ImportError as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+    loop = asyncio.get_event_loop()
+    try:
+        result = await loop.run_in_executor(None, run_pipeline, pipeline_events)
+    except Exception as e:
+        logger.error(f"Pipeline error (CybORG): {e}")
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+    # Tag result with CybORG metadata
+    result["cyborg"] = {
+        "scenario":            cyborg_result["scenario"],
+        "description":         cyborg_result["description"],
+        "difficulty":          cyborg_result["difficulty"],
+        "steps_run":           cyborg_result["steps_run"],
+        "compromised_hosts":   cyborg_result["compromised_hosts"],
+        "defender_detections": cyborg_result["defender_detections"],
+        "ip_map":              cyborg_result["ip_map"],
+        "summary":             cyborg_result["summary"],
+    }
+
+    game_update = await _ingest_result(result)
+    return {**result, "game_update": game_update}
+
+
 # ── WebSocket ──────────────────────────────────────────────────────────────────
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
