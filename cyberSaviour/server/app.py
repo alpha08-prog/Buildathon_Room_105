@@ -482,6 +482,87 @@ async def run_cyborg_scenario(payload: dict):
     return {**result, "game_update": game_update}
 
 
+# ── Cybersleuth Forensic Integration ─────────────────────────────────────────
+
+@app.get("/api/forensic/events")
+async def get_forensic_events(benchmark: str = "CFA"):
+    """List all available forensic events (PCAP files) from the benchmark."""
+    try:
+        from integrations.cybersleuth_bridge import list_events
+        events = list_events(benchmark)
+        return {"events": events, "count": len(events), "benchmark": benchmark}
+    except Exception as e:
+        logger.error(f"Forensic events error: {e}")
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+
+@app.post("/api/forensic/analyze")
+async def run_forensic_analysis(payload: dict):
+    """
+    Analyse a PCAP from the CFA benchmark and feed results through the
+    full CyberSaviour pipeline.
+
+    Body: { "event_id": str, "benchmark": str (default "CFA") }
+    """
+    event_id  = str(payload.get("event_id", "0"))
+    benchmark = payload.get("benchmark", "CFA")
+
+    try:
+        from integrations.cybersleuth_bridge import run_forensic_analysis as _run
+    except ImportError as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+    loop = asyncio.get_event_loop()
+    try:
+        forensic = await loop.run_in_executor(None, _run, event_id, benchmark)
+    except FileNotFoundError as e:
+        return JSONResponse(status_code=404, content={"detail": str(e)})
+    except ValueError as e:
+        return JSONResponse(status_code=422, content={"detail": str(e)})
+    except Exception as e:
+        logger.error(f"Forensic analysis error: {e}")
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+    pipeline_events = forensic.get("pipeline_events", [])
+    if not pipeline_events:
+        # No PCAP traffic to analyse — still return the forensic report
+        return {
+            "forensic": forensic,
+            "alerts": [],
+            "incident": None,
+            "mission": None,
+            "game_update": {"xp_earned": 0, "newly_unlocked": []},
+        }
+
+    try:
+        from .pipeline_bridge import run_pipeline
+    except ImportError as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+    try:
+        result = await loop.run_in_executor(None, run_pipeline, pipeline_events)
+    except Exception as e:
+        logger.error(f"Pipeline error (forensic): {e}")
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+    # Attach forensic metadata to the result
+    result["forensic"] = forensic
+
+    # Enrich mission with forensic context when available
+    if result.get("mission"):
+        result["mission"]["title"] = (
+            f"[Forensic] {forensic['cve']} — {forensic['service'].upper()}"
+        )
+        result["mission"]["description"] = forensic.get("cve_description", "")
+        result["mission"]["xpReward"] = max(
+            result["mission"].get("xpReward", 100),
+            150 + (50 if forensic.get("severity") == "critical" else 0),
+        )
+
+    game_update = await _ingest_result(result)
+    return {**result, "game_update": game_update}
+
+
 # ── WebSocket ──────────────────────────────────────────────────────────────────
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

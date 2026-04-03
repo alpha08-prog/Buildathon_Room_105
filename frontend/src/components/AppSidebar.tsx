@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Shield, Bot, Crosshair, BookOpen,
-  Activity, ChevronLeft, ChevronRight, Swords, Users, Cpu,
+  Activity, ChevronLeft, ChevronRight, Swords, Users, Cpu, Microscope,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,7 @@ const navItems = [
   { path: '/response',              label: 'Response Center',icon: Crosshair,       section: 'ops' },
   { path: '/codex',                 label: 'Codex',          icon: BookOpen,        section: 'intel' },
   { path: '/cyborg',               label: 'CybORG Sim',     icon: Cpu,             section: 'intel' },
+  { path: '/forensic',             label: 'Forensic Lab',   icon: Microscope,      section: 'intel' },
 ];
 
 export function AppSidebar() {

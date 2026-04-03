@@ -17,6 +17,7 @@ import Codex                from "./pages/Codex";
 import MissionBriefing      from "./pages/MissionBriefing";
 import Missions             from "./pages/Missions";
 import CybORGSimulation     from "./pages/CybORGSimulation";
+import ForensicAnalysis     from "./pages/ForensicAnalysis";
 
 // Global game overlays
 import { XpPopupLayer }           from "./components/animations/XpPopup";
@@ -54,6 +55,8 @@ const App = () => (
           <Route path="/memory"              element={<Navigate to="/codex" replace />} />
           {/* CybORG */}
           <Route path="/cyborg"              element={<CybORGSimulation />} />
+          {/* Forensic */}
+          <Route path="/forensic"            element={<ForensicAnalysis />} />
           {/* 404 */}
           <Route path="*"                    element={<NotFound />} />
         </Routes>

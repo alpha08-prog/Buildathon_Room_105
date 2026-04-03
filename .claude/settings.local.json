@@ -31,7 +31,10 @@
       "Bash(/c/Users/agraw/miniconda3/python.exe -m pip install paramiko pettingzoo matplotlib)",
       "Bash(curl -s http://localhost:8000/api/cyborg/scenarios)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(f\"\"  {s[''''name'''']} \\({s[''''difficulty'''']}\\) — {s[''''description''''][:60]}...\"\"\\) for s in d[''''scenarios'''']]\")",
-      "Bash(netstat -ano)"
+      "Bash(netstat -ano)",
+      "Bash(find /c/Users/agraw/Buildathon_Room_105 -path */tools/report/* -type f)",
+      "Bash(find /c/Users/agraw/Buildathon_Room_105/Cybersleuth_Forensic_Agent/src -name *.py -path *pcap* -type f)",
+      "Bash(C:Usersagrawminiconda3python.exe -c \":*)"
     ]
   }
 }
