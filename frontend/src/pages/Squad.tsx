@@ -235,7 +235,7 @@ export default function Squad() {
               <Activity className="w-4 h-4 text-primary" />
               <div>
                 <p className="text-[9px] text-muted-foreground uppercase tracking-widest">Ready</p>
-                <p className="text-sm font-black text-primary">{readyCount}/4</p>
+                <p className="text-sm font-black text-primary">{readyCount}/{squad.length}</p>
               </div>
             </div>
             {analyzingCount > 0 && (
@@ -252,9 +252,15 @@ export default function Squad() {
 
         {/* Agent grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-          {squad.map((agent, i) => (
-            <AgentCard key={agent.id} agent={agent} index={i} />
-          ))}
+          {squad.length ? (
+            squad.map((agent, i) => (
+              <AgentCard key={agent.id} agent={agent} index={i} />
+            ))
+          ) : (
+            <div className="md:col-span-2 xl:col-span-4 glass-card p-8 text-center text-muted-foreground">
+              Live squad data will appear here once backend agents report in.
+            </div>
+          )}
         </div>
 
         {/* Voice Lines feed */}
@@ -264,30 +270,36 @@ export default function Squad() {
             <span className="tracking-wider">Squad Intel Feed</span>
           </h2>
           <div className="space-y-2">
-            {squad.map((agent, i) => (
-              <motion.div
-                key={agent.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.08 }}
-                className="flex items-start gap-3 p-3 rounded-xl bg-secondary/30 border border-border/20"
-              >
-                <div
-                  className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5"
-                  style={{
-                    background: 'hsl(155 100% 50% / 0.1)',
-                    border: '1px solid hsl(155 100% 50% / 0.25)',
-                    color: 'hsl(155 100% 55%)',
-                  }}
+            {squad.length ? (
+              squad.map((agent, i) => (
+                <motion.div
+                  key={agent.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.08 }}
+                  className="flex items-start gap-3 p-3 rounded-xl bg-secondary/30 border border-border/20"
                 >
-                  {agent.avatar}
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-primary">{agent.name} </span>
-                  <span className="text-[10px] text-muted-foreground italic">"{agent.lastVoiceLine}"</span>
-                </div>
-              </motion.div>
-            ))}
+                  <div
+                    className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5"
+                    style={{
+                      background: 'hsl(155 100% 50% / 0.1)',
+                      border: '1px solid hsl(155 100% 50% / 0.25)',
+                      color: 'hsl(155 100% 55%)',
+                    }}
+                  >
+                    {agent.avatar}
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-primary">{agent.name} </span>
+                    <span className="text-[10px] text-muted-foreground italic">"{agent.lastVoiceLine}"</span>
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                No squad intel feed yet.
+              </p>
+            )}
           </div>
         </GlassCard>
       </div>

@@ -193,15 +193,27 @@ def _shape(state: dict, raw_events: list) -> dict:
 
     # ── Incident ──────────────────────────────────────────────────────────────
     inc_status = "investigating" if action_result.get("status") == "success" else "open"
+    # Use canonical steps (built below) — build incident events from _AGENT_ORDER
+    # to avoid duplicates. We derive ran_agents here for the incident events.
+    _ran_for_events = {h["agent"] for h in state.get("history", [])}
+    _steps_for_events: list[str] = []
+    _seen_ev: set[str] = set()
+    for _n in _AGENT_ORDER:
+        if _n in _ran_for_events or _n == "Response_Agent" or (
+            _n == "Action_Layer" and decision.get("requires_human")
+        ):
+            if _n not in _seen_ev:
+                _seen_ev.add(_n)
+                _steps_for_events.append(_n)
     inc_events = [
         {
             "id":          f"E-{uuid.uuid4().hex[:6]}",
             "timestamp":   now,
             "type":        step,
-            "description": f"{step} completed",
+            "description": f"{step.replace('_', ' ')} completed",
             "source":      "Pipeline",
         }
-        for step in response.get("pipeline_steps", [])
+        for step in _steps_for_events
     ]
     incident = {
         "id":              inc_id,
@@ -236,6 +248,23 @@ def _shape(state: dict, raw_events: list) -> dict:
 
     # ── Response actions ──────────────────────────────────────────────────────
     action = action_result.get("action", "")
+    # ── Canonical pipeline steps: ordered, deduplicated, always complete ─────
+    ran_agents = {h["agent"] for h in state.get("history", [])}
+    # Response_Agent always runs last; Action_Layer shown even when pending
+    canonical_steps = [
+        name for name in _AGENT_ORDER
+        if name in ran_agents
+        or name == "Response_Agent"
+        or (name == "Action_Layer" and decision.get("requires_human"))
+    ]
+    # Remove duplicates while preserving order (Log_Agent loop fix)
+    seen: set[str] = set()
+    pipeline_steps: list[str] = []
+    for s in canonical_steps:
+        if s not in seen:
+            seen.add(s)
+            pipeline_steps.append(s)
+
     response_payload = {
         "id":                    f"RESP-{uuid.uuid4().hex[:8].upper()}",
         "incidentId":            inc_id,
@@ -246,7 +275,7 @@ def _shape(state: dict, raw_events: list) -> dict:
         "ipsActedOn":            response.get("ips_acted_on", action_result.get("ips_acted_on", [])),
         "report":                response.get("report", "No report generated."),
         "timestamp":             response.get("timestamp", now),
-        "pipelineSteps":         response.get("pipeline_steps", []),
+        "pipelineSteps":         pipeline_steps,
         "requiresHumanApproval": bool(decision.get("requires_human")),
     }
     response_actions = []
@@ -266,7 +295,7 @@ def _shape(state: dict, raw_events: list) -> dict:
                 "suggestedBy":           "Response Agent",
                 "incidentId":            inc_id,
                 "actionStatus":          action_result.get("status", "unknown"),
-                "pipelineSteps":         response.get("pipeline_steps", []),
+                "pipelineSteps":         pipeline_steps,
                 "priority":              _map_priority(priority),
                 "report":                response.get("report", "No report generated."),
                 "requiresHumanApproval": False,
@@ -288,7 +317,7 @@ def _shape(state: dict, raw_events: list) -> dict:
                 "suggestedBy":           "Response Agent",
                 "incidentId":            inc_id,
                 "actionStatus":          "pending_human_review",
-                "pipelineSteps":         response.get("pipeline_steps", []),
+                "pipelineSteps":         pipeline_steps,
                 "priority":              _map_priority(priority),
                 "report":                response.get("report", "No report generated."),
                 "requiresHumanApproval": True,

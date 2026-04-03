@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
@@ -12,7 +11,8 @@ import {
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { StatCard, GlassCard, SeverityBadge, StatusDot } from '@/components/ui/stat-card';
 import { useStore } from '@/store/useStore';
-import { threatChartData, rankTiers } from '@/data/mockData';
+import { rankTiers } from '@/data/mockData';
+import type { Alert } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { AttackGraph } from '@/components/AttackGraph';
 import { StreakFlame } from '@/components/animations/StreakFlame';
@@ -25,6 +25,73 @@ import {
   SOURCE_BADGE_CLASS,
   SOURCE_LABELS,
 } from '@/lib/dataMapper';
+
+type ThreatActivityBucket = {
+  critical: number;
+  high: number;
+  hour: Date;
+  low: number;
+  medium: number;
+  score: number;
+  time: string;
+};
+
+function getHourStart(date: Date): Date {
+  const bucket = new Date(date);
+  bucket.setMinutes(0, 0, 0);
+  return bucket;
+}
+
+function formatBucketLabel(date: Date): string {
+  return date.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function buildThreatActivity(alerts: Alert[]): ThreatActivityBucket[] {
+  const currentHour = getHourStart(new Date());
+  const buckets = Array.from({ length: 24 }, (_, index) => {
+    const hour = new Date(currentHour);
+    hour.setHours(currentHour.getHours() - (23 - index));
+
+    return {
+      critical: 0,
+      high: 0,
+      hour,
+      low: 0,
+      medium: 0,
+      score: 0,
+      time: formatBucketLabel(hour),
+    };
+  });
+
+  const byHour = new Map(buckets.map((bucket) => [bucket.hour.getTime(), bucket]));
+
+  alerts.forEach((alert) => {
+    const alertDate = new Date(alert.timestamp);
+    if (Number.isNaN(alertDate.getTime())) return;
+
+    const bucket = byHour.get(getHourStart(alertDate).getTime());
+    if (!bucket) return;
+
+    bucket[alert.severity] += 1;
+    bucket.score +=
+      alert.severity === 'critical' ? 4 :
+      alert.severity === 'high' ? 3 :
+      alert.severity === 'medium' ? 2 : 1;
+  });
+
+  return buckets;
+}
+
+function heatmapColor(score: number): string {
+  if (score >= 8) return 'hsl(0 84% 60% / 0.85)';
+  if (score >= 5) return 'hsl(25 95% 53% / 0.7)';
+  if (score >= 3) return 'hsl(48 96% 53% / 0.5)';
+  if (score >= 1) return 'hsl(155 100% 50% / 0.25)';
+  return 'hsl(220 20% 14%)';
+}
 
 // ── Simulated alerts pool ────────────────────────────────────────────────────
 // ── XP Progress Bar ──────────────────────────────────────────────────────────
@@ -205,18 +272,22 @@ function SquadMiniStatus({ agent }: { agent: any }) {
 // ── Main Dashboard ───────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { alerts, gameState, missions, squad, cyborgRuns, forensicRuns } = useStore();
-  const [heatmapData] = useState(() =>
-    Array.from({ length: 24 }, () =>
-      Array.from({ length: 7 }, () => Math.floor(Math.random() * 10))
-    )
-  );
-
+  const threatActivity    = buildThreatActivity(alerts);
   const criticalCount    = alerts.filter((a) => a.severity === 'critical').length;
+  const lastHourCriticalCount = alerts.filter((alert) => {
+    const timestamp = new Date(alert.timestamp);
+    return (
+      !Number.isNaN(timestamp.getTime()) &&
+      Date.now() - timestamp.getTime() <= 60 * 60 * 1000 &&
+      alert.severity === 'critical'
+    );
+  }).length;
   const activeMissions   = missions.filter((m) => m.status === 'active');
   const bossMissions     = activeMissions.filter((m) => m.bossFight);
   const hasBoss          = bossMissions.length > 0;
   const missionSrcCounts = countMissionsBySource(activeMissions);
   const alertSrcCounts   = countAlertsBySource(alerts);
+  const readySquadCount  = squad.filter((agent) => agent.status !== 'offline').length;
 
   return (
     <DashboardLayout>
@@ -311,10 +382,22 @@ export default function Dashboard() {
 
         {/* ── Stat Cards ──────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Critical Alerts"   value={criticalCount}          icon={ShieldAlert} variant="danger"  trend="+2 in last hour" />
+          <StatCard
+            title="Critical Alerts"
+            value={criticalCount}
+            icon={ShieldAlert}
+            variant="danger"
+            trend={`${lastHourCriticalCount} in last hour`}
+          />
           <StatCard title="Active Missions"   value={activeMissions.length}  icon={Target}      variant="warning" trend={`${bossMissions.length} boss fight${bossMissions.length !== 1 ? 's' : ''}`} />
           <StatCard title="Total Alerts"      value={alerts.length}          icon={Activity}    variant="default" trend="Last 24h" />
-          <StatCard title="Squad Online"      value="4/4"                    icon={Users}       variant="success" trend="All agents ready" />
+          <StatCard
+            title="Squad Online"
+            value={`${readySquadCount}/${squad.length}`}
+            icon={Users}
+            variant="success"
+            trend={squad.length ? 'Live backend squad state' : 'Waiting for pipeline agents'}
+          />
         </div>
 
         {/* ── Data Sources Panel ──────────────────────────────────────────── */}
@@ -369,33 +452,48 @@ export default function Dashboard() {
               <span className="text-xs text-muted-foreground">Last 24 hours</span>
             </div>
             <div className="flex-1 min-h-[230px] w-full relative">
-              <div className="absolute inset-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={threatChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="critGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ff4d4f" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#ff4d4f" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="highGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="medGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#facc15" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#facc15" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 20% 16%)" vertical={false} />
-                    <XAxis dataKey="time" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} dy={10} />
-                    <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} dx={-10} />
-                    <Tooltip contentStyle={{ background: '#111827', border: '1px solid hsl(220 20% 16%)', borderRadius: '12px', fontSize: 12 }} labelStyle={{ color: '#e5e7eb' }} />
-                    <Area type="monotone" dataKey="critical" stroke="#ff4d4f" fill="url(#critGrad)" strokeWidth={2} />
-                    <Area type="monotone" dataKey="high"     stroke="#f97316" fill="url(#highGrad)" strokeWidth={2} />
-                    <Area type="monotone" dataKey="medium"   stroke="#facc15" fill="url(#medGrad)"  strokeWidth={1.5} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              {alerts.length ? (
+                <div className="absolute inset-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={threatActivity} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="critGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ff4d4f" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#ff4d4f" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="highGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="medGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#facc15" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#facc15" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 20% 16%)" vertical={false} />
+                      <XAxis dataKey="time" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} dy={10} />
+                      <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} dx={-10} />
+                      <Tooltip
+                        contentStyle={{ background: '#111827', border: '1px solid hsl(220 20% 16%)', borderRadius: '12px', fontSize: 12 }}
+                        formatter={(value: number, name: string) => [value, name.toUpperCase()]}
+                        labelStyle={{ color: '#e5e7eb' }}
+                      />
+                      <Area type="monotone" dataKey="critical" stroke="#ff4d4f" fill="url(#critGrad)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="high"     stroke="#f97316" fill="url(#highGrad)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="medium"   stroke="#facc15" fill="url(#medGrad)"  strokeWidth={1.5} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-center px-6">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">No live threat activity yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      The chart will fill from real alerts as the pipeline runs.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </GlassCard>
 
@@ -403,24 +501,28 @@ export default function Dashboard() {
           <GlassCard className="flex flex-col">
             <h2 className="text-sm font-semibold mb-4">Severity Heatmap (24h)</h2>
             <div className="flex-1 min-h-[180px]">
-              <div className="grid grid-cols-6 gap-1.5 h-full">
-                {heatmapData.slice(0, 24).map((row, i) => (
-                  <motion.div
-                    key={`hour-${i}`}
-                    className="rounded-sm cursor-pointer"
-                    whileHover={{ scale: 1.2 }}
-                    style={{
-                      backgroundColor:
-                        row[0] > 7 ? 'hsl(0 84% 60% / 0.8)' :
-                        row[0] > 5 ? 'hsl(25 95% 53% / 0.6)' :
-                        row[0] > 3 ? 'hsl(48 96% 53% / 0.4)' :
-                        row[0] > 1 ? 'hsl(155 100% 50% / 0.2)' :
-                        'hsl(220 20% 14%)',
-                    }}
-                    title={`Hour ${i}: ${row[0]} threats`}
-                  />
-                ))}
-              </div>
+              {alerts.length ? (
+                <div className="grid grid-cols-6 gap-1.5 h-full">
+                  {threatActivity.map((bucket) => (
+                    <motion.div
+                      key={bucket.hour.toISOString()}
+                      className="rounded-sm cursor-pointer border border-border/20"
+                      whileHover={{ scale: 1.12 }}
+                      style={{ backgroundColor: heatmapColor(bucket.score) }}
+                      title={`${bucket.time}: ${bucket.critical} critical, ${bucket.high} high, ${bucket.medium} medium, ${bucket.low} low`}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center text-center px-4">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">No severity spread yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This heatmap now waits for real alert data instead of mock values.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-3 mt-3 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm" style={{ background: 'hsl(155 100% 50% / 0.2)' }} /> Low</span>
@@ -521,9 +623,15 @@ export default function Dashboard() {
               <Link to="/squad" className="text-xs text-primary hover:underline">Manage</Link>
             </div>
             <div className="space-y-2 flex-1">
-              {squad.map((agent) => (
-                <SquadMiniStatus key={agent.id} agent={agent} />
-              ))}
+              {squad.length ? (
+                squad.map((agent) => (
+                  <SquadMiniStatus key={agent.id} agent={agent} />
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No live squad agents yet
+                </p>
+              )}
             </div>
           </GlassCard>
         </div>

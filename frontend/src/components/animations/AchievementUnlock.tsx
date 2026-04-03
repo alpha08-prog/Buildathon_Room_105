@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Zap, Flame, ShieldOff, Ghost, BookOpen, Search, Sword } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useStore } from '@/store/useStore';
 import type { Achievement } from '@/data/mockData';
 
@@ -51,11 +52,14 @@ function ParticleBurst({ rarity }: { rarity: string }) {
 export function AchievementUnlockOverlay() {
   const { pendingAchievement, dismissAchievement } = useStore();
   const ach = pendingAchievement as Achievement | null;
+  const portalRoot = typeof document !== 'undefined' ? document.body : null;
 
   const style = ach ? RARITY_STYLES[ach.rarity] : RARITY_STYLES.common;
   const Icon  = ach ? (ICONS[ach.icon] ?? Trophy) : Trophy;
 
-  return (
+  if (!portalRoot) return null;
+
+  return createPortal(
     <AnimatePresence>
       {ach && (
         <>
@@ -151,6 +155,7 @@ export function AchievementUnlockOverlay() {
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    portalRoot
   );
 }

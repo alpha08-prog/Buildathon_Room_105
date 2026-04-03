@@ -345,14 +345,14 @@ export const attackGraphEdges = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const initialGameState: GameState = {
-  xp: 1340,
-  xpToNextRank: 2000,
-  streak: 4,
-  comboMultiplier: 1.4,
-  rank: 'Tier-2 Analyst',
-  rankTier: 2,
-  missionsCompleted: 7,
-  totalXpEarned: 3340,
+  xp: 0,
+  xpToNextRank: 1000,
+  streak: 0,
+  comboMultiplier: 1,
+  rank: 'RECRUIT',
+  rankTier: 1,
+  missionsCompleted: 0,
+  totalXpEarned: 0,
   lastActionAt: new Date().toISOString(),
 };
 

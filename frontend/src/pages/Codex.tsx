@@ -224,11 +224,27 @@ export default function Codex() {
   const unlockedCount = achievements.filter((a) => a.unlockedAt).length;
   const totalXpFromAch = achievements.filter((a) => a.unlockedAt).reduce((s, a) => s + a.xpReward, 0);
 
-  const filteredAchievements = achievements.filter((a) => {
-    const matchSearch = searchQuery === '' || a.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchRarity = rarityFilter === 'all' || a.rarity === rarityFilter;
-    return matchSearch && matchRarity;
-  });
+  const filteredAchievements = achievements
+    .filter((a) => {
+      const matchSearch = searchQuery === '' || a.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchRarity = rarityFilter === 'all' || a.rarity === rarityFilter;
+      return matchSearch && matchRarity;
+    })
+    .sort((left, right) => {
+      const leftUnlocked = Boolean(left.unlockedAt);
+      const rightUnlocked = Boolean(right.unlockedAt);
+
+      if (leftUnlocked !== rightUnlocked) {
+        return leftUnlocked ? -1 : 1;
+      }
+
+      if (leftUnlocked && rightUnlocked) {
+        return new Date(right.unlockedAt ?? 0).getTime() - new Date(left.unlockedAt ?? 0).getTime();
+      }
+
+      const rarityOrder = { legendary: 0, epic: 1, rare: 2, common: 3 };
+      return rarityOrder[left.rarity] - rarityOrder[right.rarity];
+    });
 
   const filteredCampaigns = memoryEntries.filter((e) =>
     searchQuery === '' ||

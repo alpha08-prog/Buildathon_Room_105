@@ -10,19 +10,11 @@ import type {
   PipelineResponse,
   ResponseAction,
   SquadAgent,
+  SquadAbility,
   XpEvent,
 } from '@/data/mockData';
 import {
   initialGameState,
-  mockAchievements,
-  mockAgents,
-  mockAlerts,
-  mockIncidents,
-  mockMemoryEntries,
-  mockMissions,
-  mockResponses,
-  mockResponseActions,
-  mockSquad,
   rankTiers,
 } from '@/data/mockData';
 import {
@@ -296,6 +288,190 @@ function mergeAchievements(existing: Achievement[], incoming: Achievement[]): Ac
   return [...mergedExisting, ...newOnly];
 }
 
+type SquadAbilityTemplate = {
+  description: string;
+  name: string;
+  unlockLevel: number;
+  xpCost: number;
+};
+
+const SQUAD_SPECIALTIES: Record<string, string> = {
+  Action: 'Containment orchestration and decisive remediation',
+  Analysis: 'Live telemetry analysis and anomaly detection',
+  Correlation: 'Cross-source chaining and attack path analysis',
+  Decision: 'Response strategy and analyst-ready recommendations',
+  Intelligence: 'Threat intel validation and IOC enrichment',
+  Memory: 'Historical recall and repeat-offender context',
+  Reporting: 'Executive summaries and incident narratives',
+  Response: 'Remediation planning and action tracking',
+  Review: 'Human approval coordination and guardrail checks',
+};
+
+const DEFAULT_SQUAD_ABILITIES: Record<string, SquadAbilityTemplate[]> = {
+  Action: [
+    { name: 'Rapid Contain', description: 'Queues containment actions for active threats', unlockLevel: 1, xpCost: 0 },
+    { name: 'Parallel Remediation', description: 'Coordinates multiple response steps in sequence', unlockLevel: 3, xpCost: 220 },
+    { name: 'Kill Switch', description: 'Breaks a hostile chain with a high-impact response', unlockLevel: 5, xpCost: 420 },
+  ],
+  Analysis: [
+    { name: 'Deep Scan', description: 'Sweeps fresh telemetry for anomaly bursts', unlockLevel: 1, xpCost: 0 },
+    { name: 'IOC Flashmatch', description: 'Cross-checks findings against active indicators', unlockLevel: 2, xpCost: 160 },
+    { name: 'Timeline Recon', description: 'Rebuilds event chronology around a threat spike', unlockLevel: 4, xpCost: 320 },
+  ],
+  Correlation: [
+    { name: 'Graph Burst', description: 'Builds live relationships between incidents and hosts', unlockLevel: 1, xpCost: 0 },
+    { name: 'Phase Lock', description: 'Predicts the likely next ATT&CK phase', unlockLevel: 3, xpCost: 240 },
+    { name: 'Cascade Alert', description: 'Escalates chained incidents before they fan out', unlockLevel: 5, xpCost: 400 },
+  ],
+  Decision: [
+    { name: 'Playbook Fit', description: 'Maps an incident to the nearest response pattern', unlockLevel: 1, xpCost: 0 },
+    { name: 'Risk Forecast', description: 'Estimates collateral risk before execution', unlockLevel: 3, xpCost: 200 },
+    { name: 'Priority Override', description: 'Escalates high-confidence threats instantly', unlockLevel: 5, xpCost: 360 },
+  ],
+  Intelligence: [
+    { name: 'IOC Storm', description: 'Fans out indicator lookups across threat intel context', unlockLevel: 1, xpCost: 0 },
+    { name: 'Actor Profile', description: 'Builds a likely actor profile from current evidence', unlockLevel: 2, xpCost: 180 },
+    { name: 'Zero-Day Watch', description: 'Flags suspicious CVE overlap in fresh activity', unlockLevel: 4, xpCost: 340 },
+  ],
+  Memory: [
+    { name: 'Case Recall', description: 'Pulls similar incidents from long-term memory', unlockLevel: 1, xpCost: 0 },
+    { name: 'Repeat Tracker', description: 'Highlights recurring hostile infrastructure', unlockLevel: 3, xpCost: 180 },
+    { name: 'Resolution Echo', description: 'Surfaces the strongest prior fix path', unlockLevel: 4, xpCost: 300 },
+  ],
+  Reporting: [
+    { name: 'Rapid Brief', description: 'Summarizes the current incident for analysts', unlockLevel: 1, xpCost: 0 },
+    { name: 'Chain Summary', description: 'Turns pipeline reasoning into a concise narrative', unlockLevel: 2, xpCost: 150 },
+    { name: 'Executive Pulse', description: 'Generates a stakeholder-grade situation report', unlockLevel: 4, xpCost: 280 },
+  ],
+  Response: [
+    { name: 'Auto-Block', description: 'Prepares blocker recommendations for bad sources', unlockLevel: 1, xpCost: 0 },
+    { name: 'Host Quarantine', description: 'Plans isolation steps for compromised systems', unlockLevel: 3, xpCost: 240 },
+    { name: 'Response Mesh', description: 'Coordinates multiple approved actions together', unlockLevel: 5, xpCost: 420 },
+  ],
+  Review: [
+    { name: 'Approval Gate', description: 'Holds risky actions for analyst confirmation', unlockLevel: 1, xpCost: 0 },
+    { name: 'Context Replay', description: 'Packages the reasoning chain for quick review', unlockLevel: 2, xpCost: 150 },
+    { name: 'Exception Route', description: 'Escalates edge cases with rich context', unlockLevel: 4, xpCost: 280 },
+  ],
+};
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function initialsFromName(name: string): string {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+  return initials.slice(0, 2) || '?';
+}
+
+function mapAgentToSquadStatus(status: Agent['status']): SquadAgent['status'] {
+  if (status === 'error') return 'offline';
+  if (status === 'active' || status === 'processing') return 'analyzing';
+  return 'ready';
+}
+
+function getMissionCountForAgent(agentName: string, incidents: Incident[], missions: Mission[]): number {
+  const incidentIds = new Set(
+    incidents
+      .filter((incident) => incident.assignedAgent.toLowerCase() === agentName.toLowerCase())
+      .map((incident) => incident.id)
+  );
+
+  return missions.filter((mission) => incidentIds.has(mission.incidentId)).length;
+}
+
+function buildSquadAbilities(
+  agent: Agent,
+  level: number,
+  confidence: number
+): SquadAbility[] {
+  const templates =
+    DEFAULT_SQUAD_ABILITIES[agent.type] ??
+    DEFAULT_SQUAD_ABILITIES.Analysis;
+
+  return templates.map((template, index) => ({
+    id: `${agent.id}-ability-${index + 1}`,
+    name: template.name,
+    description: template.description,
+    unlocked: level >= template.unlockLevel || confidence >= 92,
+    xpCost: template.unlockLevel === 1 ? 0 : template.xpCost,
+  }));
+}
+
+function buildSquadFromAgents(params: {
+  agents: Agent[];
+  gameState: GameState;
+  incidents: Incident[];
+  missions: Mission[];
+  previousSquad: SquadAgent[];
+  responseActions: ResponseAction[];
+}): SquadAgent[] {
+  const { agents, gameState, incidents, missions, previousSquad, responseActions } = params;
+
+  if (!agents.length) return [];
+
+  const previousById = new Map(previousSquad.map((agent) => [agent.id, agent]));
+
+  return agents.map((agent, index) => {
+    const previous = previousById.get(agent.id);
+    const confidence = clamp(Math.round(agent.confidence), 0, 100);
+    const missionCount = getMissionCountForAgent(agent.name, incidents, missions);
+    const actionCount = responseActions.filter(
+      (action) => action.suggestedBy.toLowerCase() === agent.name.toLowerCase()
+    ).length;
+    const reasoningDepth = agent.reasoning.length;
+    const level = clamp(
+      1 + Math.floor((confidence + missionCount * 10 + actionCount * 6 + reasoningDepth * 4) / 28),
+      1,
+      8
+    );
+    const xpToNextLevel = 240 + level * 110;
+    const currentXp = clamp(
+      70 + confidence * 2 + missionCount * 40 + actionCount * 24 + gameState.rankTier * 25,
+      0,
+      Math.max(0, xpToNextLevel - 15)
+    );
+    const inferredStatus = mapAgentToSquadStatus(agent.status);
+    const cooldownMax = previous?.cooldownMax ?? clamp(30 + index * 12, 30, 120);
+    const cooldownRemaining =
+      previous?.status === 'cooldown' && previous.cooldownRemaining > 0
+        ? previous.cooldownRemaining
+        : 0;
+    const squadStatus = cooldownRemaining > 0 ? 'cooldown' : inferredStatus;
+    const voiceLines = dedupeById(
+      [agent.lastAction, ...agent.reasoning]
+        .filter((line): line is string => Boolean(line?.trim()))
+        .slice(0, 5)
+        .map((line, voiceIndex) => ({
+          id: `${agent.id}-voice-${voiceIndex}-${line}`,
+          line,
+        }))
+    ).map((item) => item.line);
+
+    return {
+      id: agent.id,
+      name: agent.name,
+      specialty: SQUAD_SPECIALTIES[agent.type] ?? `${agent.type} operations`,
+      avatar: initialsFromName(agent.name),
+      trust: confidence,
+      cooldownMax,
+      cooldownRemaining,
+      status: squadStatus,
+      level,
+      xpToNextLevel,
+      currentXp,
+      voiceLines,
+      lastVoiceLine: voiceLines[0] ?? 'Awaiting fresh telemetry.',
+      abilities: buildSquadAbilities(agent, level, confidence),
+      kills: missionCount + actionCount,
+    };
+  });
+}
+
 interface SOCStore {
   alerts: Alert[];
   addAlert: (alert: Alert) => void;
@@ -344,7 +520,7 @@ interface SOCStore {
 }
 
 export const useStore = create<SOCStore>((set, get) => ({
-  alerts: mockAlerts,
+  alerts: [],
   addAlert: (alert) =>
     set((state) => {
       const alerts = [normalizeAlert(alert), ...state.alerts];
@@ -354,8 +530,8 @@ export const useStore = create<SOCStore>((set, get) => ({
       };
     }),
 
-  agents: mockAgents,
-  achievements: mockAchievements.map(normalizeAchievement),
+  agents: [],
+  achievements: [],
   backendError: null,
   backendStatus: 'mock',
   clearNotifications: () => set({ notifications: 0 }),
@@ -406,36 +582,49 @@ export const useStore = create<SOCStore>((set, get) => ({
   hydrateBackendData: (payload) =>
     set((state) => {
       const alerts = payload.alerts ? payload.alerts.map(normalizeAlert) : state.alerts;
+      const agents = payload.agents ? payload.agents.map(normalizeAgent) : state.agents;
       const responseActions = payload.responseActions
         ? payload.responseActions.map(normalizeResponseAction)
         : state.responseActions;
+      const gameState = payload.gameState
+        ? normalizeGameState(payload.gameState, state.gameState)
+        : state.gameState;
+      const incidents = payload.incidents ? payload.incidents.map(normalizeIncident) : state.incidents;
+      const missions = payload.missions ? payload.missions.map(normalizeMission) : state.missions;
+      const squad = buildSquadFromAgents({
+        agents,
+        gameState,
+        incidents,
+        missions,
+        previousSquad: state.squad,
+        responseActions,
+      });
 
       return {
         achievements: payload.achievements
           ? payload.achievements.map(normalizeAchievement)
           : state.achievements,
-        agents: payload.agents ? payload.agents.map(normalizeAgent) : state.agents,
+        agents,
         alerts,
         backendError: null,
         backendStatus: 'connected',
-        gameState: payload.gameState
-          ? normalizeGameState(payload.gameState, state.gameState)
-          : state.gameState,
-        incidents: payload.incidents ? payload.incidents.map(normalizeIncident) : state.incidents,
+        gameState,
+        incidents,
         lastSyncedAt: payload.timestamp ?? new Date().toISOString(),
         memoryEntries: payload.memoryEntries
           ? payload.memoryEntries.map(normalizeMemoryEntry)
           : state.memoryEntries,
-        missions: payload.missions ? payload.missions.map(normalizeMission) : state.missions,
+        missions,
         notifications: deriveNotifications(alerts, responseActions),
         responses: payload.responses
           ? payload.responses.map(normalizePipelineResponse)
           : state.responses,
         responseActions,
+        squad,
       };
     }),
 
-  incidents: mockIncidents,
+  incidents: [],
   incrementNotifications: () => set((state) => ({ notifications: state.notifications + 1 })),
 
   ingestRealtimeMessage: (message) => {
@@ -724,11 +913,11 @@ export const useStore = create<SOCStore>((set, get) => ({
   },
 
   lastSyncedAt: null,
-  memoryEntries: mockMemoryEntries,
-  missions: mockMissions.map(normalizeMission),
-  notifications: deriveNotifications(mockAlerts, mockResponseActions),
+  memoryEntries: [],
+  missions: [],
+  notifications: 0,
   pendingAchievement: null,
-  responses: mockResponses.map(normalizePipelineResponse),
+  responses: [],
 
   rejectResponseAction: async (id) => {
     const state = get();
@@ -773,7 +962,7 @@ export const useStore = create<SOCStore>((set, get) => ({
     }
   },
 
-  responseActions: mockResponseActions.map(normalizeResponseAction),
+  responseActions: [],
   runDemoPipeline: async () => {
     if (get().simulationActive) return;
 
@@ -811,7 +1000,7 @@ export const useStore = create<SOCStore>((set, get) => ({
     }),
 
   simulationActive: false,
-  squad: mockSquad,
+  squad: [],
 
   // ── Multi-source run counters ─────────────────────────────────────────────
   cyborgRuns: 0,
