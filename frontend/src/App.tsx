@@ -18,6 +18,7 @@ import MissionBriefing      from "./pages/MissionBriefing";
 import Missions             from "./pages/Missions";
 import CybORGSimulation     from "./pages/CybORGSimulation";
 import ForensicAnalysis     from "./pages/ForensicAnalysis";
+import SystemStatus         from "./pages/SystemStatus";
 
 // Global game overlays
 import { XpPopupLayer }           from "./components/animations/XpPopup";
@@ -57,6 +58,8 @@ const App = () => (
           <Route path="/cyborg"              element={<CybORGSimulation />} />
           {/* Forensic */}
           <Route path="/forensic"            element={<ForensicAnalysis />} />
+          {/* System Status */}
+          <Route path="/status"              element={<SystemStatus />} />
           {/* 404 */}
           <Route path="*"                    element={<NotFound />} />
         </Routes>

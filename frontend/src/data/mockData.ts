@@ -135,7 +135,7 @@ export interface Achievement {
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
   unlockedAt?: string;
   condition: string;
-  category: 'combat' | 'speed' | 'streak' | 'mastery' | 'discovery';
+  category: 'combat' | 'speed' | 'streak' | 'mastery' | 'discovery' | 'cyborg' | 'forensic';
 }
 
 export interface SquadAgent {
@@ -464,6 +464,42 @@ export const mockAchievements: Achievement[] = [
     id: 'ACH-008', name: 'Threat Hunter', description: 'Investigate 10 high-severity alerts',
     icon: 'Search', xpReward: 175, rarity: 'rare',
     unlockedAt: '2024-12-13T14:00:00Z', condition: 'high_alerts_investigated >= 10', category: 'mastery',
+  },
+
+  // ── CybORG achievements ──────────────────────────────────────────────────────
+  {
+    id: 'ACH-009', name: 'Network Operator', description: 'Run your first CybORG network simulation',
+    icon: 'Cpu', xpReward: 120, rarity: 'common',
+    condition: 'cyborg_runs >= 1', category: 'cyborg',
+  },
+  {
+    id: 'ACH-010', name: 'Simulation Veteran', description: 'Complete 3 CybORG scenarios',
+    icon: 'Network', xpReward: 250, rarity: 'epic',
+    condition: 'cyborg_runs >= 3', category: 'cyborg',
+  },
+
+  // ── Forensic achievements ────────────────────────────────────────────────────
+  {
+    id: 'ACH-011', name: 'Digital Examiner', description: 'Run your first forensic PCAP analysis',
+    icon: 'Microscope', xpReward: 120, rarity: 'common',
+    condition: 'forensic_runs >= 1', category: 'forensic',
+  },
+  {
+    id: 'ACH-012', name: 'Forensic Expert', description: 'Complete 5 forensic analyses',
+    icon: 'FileSearch', xpReward: 300, rarity: 'epic',
+    condition: 'forensic_runs >= 5', category: 'forensic',
+  },
+  {
+    id: 'ACH-013', name: 'CVE Hunter', description: 'Identify CVEs across multiple PCAP analyses',
+    icon: 'ShieldAlert', xpReward: 200, rarity: 'rare',
+    condition: 'forensic_runs >= 1', category: 'forensic',
+  },
+
+  // ── Integration achievement ──────────────────────────────────────────────────
+  {
+    id: 'ACH-014', name: 'Full Stack Analyst', description: 'Use ASE, CybORG, and Forensic Lab in one session',
+    icon: 'Trophy', xpReward: 500, rarity: 'legendary',
+    condition: 'all_sources', category: 'mastery',
   },
 ];
 

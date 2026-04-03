@@ -31,6 +31,7 @@ import {
   resetDemoState as resetDemoStateRequest,
   runDemoPipeline as runDemoPipelineRequest,
 } from '@/lib/api';
+import { evaluateNewAchievements } from '@/lib/dataMapper';
 
 const XP_TABLE: Record<string, number> = {
   approve_response: 80,
@@ -86,20 +87,13 @@ function checkNewAchievements(
   updatedMissions: number
 ): Achievement[] {
   const locked = state.achievements.filter((achievement) => !achievement.unlockedAt);
-  const newlyUnlocked: Achievement[] = [];
-
-  for (const achievement of locked) {
-    let unlock = false;
-    if (achievement.condition === 'missions_completed >= 1' && updatedMissions >= 1) unlock = true;
-    if (achievement.condition === 'missions_completed >= 5' && updatedMissions >= 5) unlock = true;
-    if (achievement.condition === 'streak >= 5' && updatedStreak >= 5) unlock = true;
-    if (achievement.condition === 'boss_missions_completed >= 1' && updatedMissions >= 3) unlock = true;
-    if (unlock) {
-      newlyUnlocked.push({ ...achievement, unlockedAt: new Date().toISOString() });
-    }
-  }
-
-  return newlyUnlocked;
+  const candidates = evaluateNewAchievements(locked, {
+    missionsCompleted: updatedMissions,
+    streak: updatedStreak,
+    cyborgRuns: state.cyborgRuns,
+    forensicRuns: state.forensicRuns,
+  });
+  return candidates.map((a) => ({ ...a, unlockedAt: new Date().toISOString() }));
 }
 
 function deriveNotifications(alerts: Alert[], responseActions: ResponseAction[]): number {
@@ -337,6 +331,12 @@ interface SOCStore {
   updateActionStatus: (id: string, status: ResponseAction['status']) => void;
   updateMissionProgress: (missionId: string, progress: number) => void;
   xpEvents: XpEvent[];
+
+  // ── Multi-source run counters (Phase 4) ──────────────────────────────────
+  cyborgRuns: number;
+  forensicRuns: number;
+  incrementCyborgRuns: () => void;
+  incrementForensicRuns: () => void;
 
   addXP: (actionType: string, bonus?: number, triggerPos?: { x: number; y: number }) => void;
   advanceMissionPhase: (missionId: string) => void;
@@ -812,6 +812,46 @@ export const useStore = create<SOCStore>((set, get) => ({
 
   simulationActive: false,
   squad: mockSquad,
+
+  // ── Multi-source run counters ─────────────────────────────────────────────
+  cyborgRuns: 0,
+  forensicRuns: 0,
+
+  incrementCyborgRuns: () =>
+    set((state) => {
+      const cyborgRuns = state.cyborgRuns + 1;
+      const newAchievements = checkNewAchievements(
+        { ...state, cyborgRuns },
+        state.gameState.xp,
+        state.gameState.streak,
+        state.gameState.missionsCompleted,
+      );
+      return {
+        cyborgRuns,
+        achievements: newAchievements.length
+          ? state.achievements.map((a) => newAchievements.find((n) => n.id === a.id) ?? a)
+          : state.achievements,
+        pendingAchievement: newAchievements[0] ?? state.pendingAchievement,
+      };
+    }),
+
+  incrementForensicRuns: () =>
+    set((state) => {
+      const forensicRuns = state.forensicRuns + 1;
+      const newAchievements = checkNewAchievements(
+        { ...state, forensicRuns },
+        state.gameState.xp,
+        state.gameState.streak,
+        state.gameState.missionsCompleted,
+      );
+      return {
+        forensicRuns,
+        achievements: newAchievements.length
+          ? state.achievements.map((a) => newAchievements.find((n) => n.id === a.id) ?? a)
+          : state.achievements,
+        pendingAchievement: newAchievements[0] ?? state.pendingAchievement,
+      };
+    }),
 
   tickCooldowns: () =>
     set((state) => ({

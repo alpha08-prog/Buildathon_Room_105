@@ -292,7 +292,7 @@ function ResultPanel({ result }: { result: RunResult }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ForensicAnalysis() {
-  const { hydrateBackendData } = useStore();
+  const { hydrateBackendData, incrementForensicRuns } = useStore();
 
   const [events, setEvents]     = useState<ForensicEvent[]>([]);
   const [selected, setSelected] = useState<string>('0');
@@ -349,6 +349,7 @@ export default function ForensicAnalysis() {
 
       setProgress(100);
       setResult(data);
+      incrementForensicRuns();
 
       hydrateBackendData({
         alerts:          data.alerts ?? [],

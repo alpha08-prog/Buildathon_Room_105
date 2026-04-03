@@ -17,6 +17,14 @@ import { cn } from '@/lib/utils';
 import { AttackGraph } from '@/components/AttackGraph';
 import { StreakFlame } from '@/components/animations/StreakFlame';
 import { HolographicThreatSphere } from '@/components/3d/HolographicThreatSphere';
+import {
+  countMissionsBySource,
+  countAlertsBySource,
+  detectMissionSource,
+  SOURCE_EMOJI,
+  SOURCE_BADGE_CLASS,
+  SOURCE_LABELS,
+} from '@/lib/dataMapper';
 
 // ── Simulated alerts pool ────────────────────────────────────────────────────
 // ── XP Progress Bar ──────────────────────────────────────────────────────────
@@ -73,7 +81,8 @@ function ComboBadge({ multiplier }: { multiplier: number }) {
 
 // ── Active Mission Card ──────────────────────────────────────────────────────
 function ActiveMissionCard({ mission, index }: { mission: any; index: number }) {
-  const isBoss = mission.bossFight;
+  const isBoss   = mission.bossFight;
+  const src      = detectMissionSource(mission);
   const timeLeft = mission.timeLimit
     ? Math.max(0, mission.timeLimit - (mission.elapsed ?? 0))
     : null;
@@ -104,6 +113,10 @@ function ActiveMissionCard({ mission, index }: { mission: any; index: number }) 
               {mission.phase}
             </span>
           )}
+          {/* Data-source badge */}
+          <span className={cn('text-[9px] px-1 py-0.5 rounded border font-mono', SOURCE_BADGE_CLASS[src])}>
+            {SOURCE_EMOJI[src]} {SOURCE_LABELS[src]}
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -191,17 +204,19 @@ function SquadMiniStatus({ agent }: { agent: any }) {
 
 // ── Main Dashboard ───────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { alerts, gameState, missions, squad } = useStore();
+  const { alerts, gameState, missions, squad, cyborgRuns, forensicRuns } = useStore();
   const [heatmapData] = useState(() =>
     Array.from({ length: 24 }, () =>
       Array.from({ length: 7 }, () => Math.floor(Math.random() * 10))
     )
   );
 
-  const criticalCount  = alerts.filter((a) => a.severity === 'critical').length;
-  const activeMissions = missions.filter((m) => m.status === 'active');
-  const bossMissions   = activeMissions.filter((m) => m.bossFight);
-  const hasBoss        = bossMissions.length > 0;
+  const criticalCount    = alerts.filter((a) => a.severity === 'critical').length;
+  const activeMissions   = missions.filter((m) => m.status === 'active');
+  const bossMissions     = activeMissions.filter((m) => m.bossFight);
+  const hasBoss          = bossMissions.length > 0;
+  const missionSrcCounts = countMissionsBySource(activeMissions);
+  const alertSrcCounts   = countAlertsBySource(alerts);
 
   return (
     <DashboardLayout>
@@ -301,6 +316,47 @@ export default function Dashboard() {
           <StatCard title="Total Alerts"      value={alerts.length}          icon={Activity}    variant="default" trend="Last 24h" />
           <StatCard title="Squad Online"      value="4/4"                    icon={Users}       variant="success" trend="All agents ready" />
         </div>
+
+        {/* ── Data Sources Panel ──────────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="glass-card p-4"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pipeline Data Sources</span>
+            <Link to="/response" className="text-xs text-primary hover:underline">View all</Link>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {(
+              [
+                { key: 'cybersaviour', label: 'ASE Pipeline', missions: missionSrcCounts.cybersaviour, alerts: alertSrcCounts.cybersaviour, runs: null,          href: '/response'  },
+                { key: 'cyborg',       label: 'CybORG Sim',   missions: missionSrcCounts.cyborg,       alerts: alertSrcCounts.cyborg,       runs: cyborgRuns,   href: '/cyborg'    },
+                { key: 'forensic',     label: 'Forensic Lab', missions: missionSrcCounts.forensic,     alerts: alertSrcCounts.forensic,     runs: forensicRuns, href: '/forensic'  },
+              ] as const
+            ).map(({ key, label, missions: mc, alerts: ac, runs, href }) => (
+              <Link
+                key={key}
+                to={href}
+                className={cn(
+                  'group flex flex-col gap-2 p-3 rounded-xl border transition-all duration-200 hover:scale-[1.02]',
+                  SOURCE_BADGE_CLASS[key as keyof typeof SOURCE_BADGE_CLASS],
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">{SOURCE_EMOJI[key as keyof typeof SOURCE_EMOJI]}</span>
+                  <span className="text-xs font-semibold truncate">{label}</span>
+                </div>
+                <div className="flex gap-3 text-[10px] font-mono">
+                  <span><span className="text-foreground font-bold">{mc}</span> missions</span>
+                  <span><span className="text-foreground font-bold">{ac}</span> alerts</span>
+                  {runs !== null && <span><span className="text-foreground font-bold">{runs}</span> runs</span>}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </motion.div>
 
         {/* ── Charts Row ──────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

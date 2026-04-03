@@ -212,7 +212,7 @@ function ResultPanel({ result }: { result: RunResult }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function CybORGSimulation() {
-  const { hydrateBackendData } = useStore();
+  const { hydrateBackendData, incrementCyborgRuns } = useStore();
 
   const [scenarios, setScenarios]     = useState<Scenario[]>([]);
   const [selected, setSelected]       = useState<string>('Scenario1');
@@ -254,6 +254,7 @@ export default function CybORGSimulation() {
 
       setProgress(100);
       setResult(data);
+      incrementCyborgRuns();
 
       // Sync to global store so dashboard updates
       hydrateBackendData({

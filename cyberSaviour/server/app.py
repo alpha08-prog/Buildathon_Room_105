@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 
 from .game_store import GameStore
 from .websocket_manager import ConnectionManager
+from .integrations import integration_manager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -561,6 +562,82 @@ async def run_forensic_analysis(payload: dict):
 
     game_update = await _ingest_result(result)
     return {**result, "game_update": game_update}
+
+
+# ── Forensic background jobs ──────────────────────────────────────────────────
+
+@app.post("/api/forensic/analyze/async")
+async def run_forensic_async(payload: dict):
+    """
+    Submit a forensic analysis as a background job.
+    Returns job_id immediately; poll GET /api/forensic/jobs/{job_id} for status.
+
+    Body: { "event_id": str, "benchmark": str (default "CFA") }
+    """
+    event_id  = str(payload.get("event_id", "0"))
+    benchmark = payload.get("benchmark", "CFA")
+    job_id    = integration_manager.submit_forensic_job(event_id, benchmark)
+    return {"job_id": job_id, "status": "running", "event_id": event_id, "benchmark": benchmark}
+
+
+@app.get("/api/forensic/jobs")
+async def list_forensic_jobs():
+    """Return all forensic analysis jobs (newest first)."""
+    return {"jobs": integration_manager.list_jobs(), "count": len(integration_manager.list_jobs())}
+
+
+@app.get("/api/forensic/jobs/{job_id}")
+async def get_forensic_job(job_id: str):
+    """Poll the status of a background forensic analysis job."""
+    job = integration_manager.get_job(job_id)
+    if not job:
+        return JSONResponse(status_code=404, content={"detail": f"Job '{job_id}' not found"})
+
+    if job["status"] == "complete" and job.get("result"):
+        # Ingest the result into the pipeline if not already done
+        forensic = job["result"]
+        pipeline_events = forensic.get("pipeline_events", [])
+        if pipeline_events:
+            try:
+                result = await integration_manager.run_pipeline(pipeline_events)
+                result["forensic"] = forensic
+                if result.get("mission"):
+                    result["mission"]["title"] = f"[Forensic] {forensic['cve']} — {forensic['service'].upper()}"
+                    result["mission"]["description"] = forensic.get("cve_description", "")
+                game_update = await _ingest_result(result)
+                return {**job, "pipeline_result": result, "game_update": game_update}
+            except Exception as e:
+                logger.error(f"Pipeline error (async forensic job {job_id}): {e}")
+
+    return job
+
+
+# ── System Status ─────────────────────────────────────────────────────────────
+
+@app.get("/api/status")
+async def get_system_status():
+    """
+    Unified health summary for the System Status dashboard page.
+    Returns pipeline counts, integration health, and game stats.
+    """
+    integration_status = integration_manager.get_status()
+    return {
+        "timestamp":    datetime.utcnow().isoformat(),
+        "pipeline": {
+            "alerts":    len(_pipeline_alerts),
+            "incidents": len(_pipeline_incidents),
+            "missions":  len(_pipeline_missions),
+            "actions":   len(_pipeline_actions),
+            "memory":    len(_pipeline_memory),
+        },
+        "game": {
+            "xp":                 game_store.state.xp,
+            "rank":               game_store.state.rank,
+            "streak":             game_store.state.streak,
+            "missions_completed": game_store.state.total_runs,
+        },
+        "integrations": integration_status,
+    }
 
 
 # ── WebSocket ──────────────────────────────────────────────────────────────────

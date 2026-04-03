@@ -34,7 +34,8 @@
       "Bash(netstat -ano)",
       "Bash(find /c/Users/agraw/Buildathon_Room_105 -path */tools/report/* -type f)",
       "Bash(find /c/Users/agraw/Buildathon_Room_105/Cybersleuth_Forensic_Agent/src -name *.py -path *pcap* -type f)",
-      "Bash(C:Usersagrawminiconda3python.exe -c \":*)"
+      "Bash(C:Usersagrawminiconda3python.exe -c \":*)",
+      "Bash(npm run:*)"
     ]
   }
 }
