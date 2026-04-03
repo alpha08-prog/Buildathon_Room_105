@@ -115,3 +115,19 @@ export async function decideResponseAction(
 export async function completeMissionRequest(missionId: string): Promise<Record<string, unknown>> {
   return postJson(`/api/missions/${missionId}/complete`, {});
 }
+
+export async function resetDemoState(): Promise<{
+  achievements: unknown[];
+  agents: unknown[];
+  alerts: unknown[];
+  game_state: Record<string, unknown>;
+  incidents: unknown[];
+  memory_entries: unknown[];
+  missions: unknown[];
+  response_actions: unknown[];
+  responses: unknown[];
+  status: string;
+  timestamp: string;
+}> {
+  return postJson('/api/demo/reset', {});
+}

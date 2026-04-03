@@ -100,7 +100,7 @@ def pretty(label, data):
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    print("CyberSaviour — Full Pipeline")
+    print("CyberSaviour - Full Pipeline")
     print(f"  events fed in : {len(SAMPLE_EVENTS)}")
 
     state = build_initial_state(SAMPLE_EVENTS)
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     # --- Stage 1: LogAgent ---
     print("\n[1/8] LogAgent ...")
     state = run_log_agent(state)
-    pretty("LogAgent — alerts", state["alerts"])
+    pretty("LogAgent - alerts", state["alerts"])
 
     # --- Stage 2: CorrelationAgent ---
     print("\n[2/8] CorrelationAgent ...")

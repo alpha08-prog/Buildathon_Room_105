@@ -1,15 +1,18 @@
-import { Bell, Radio, Search } from 'lucide-react';
+import { Bell, Radio, RotateCcw, Search } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
 
 export function TopNavbar() {
+  const [resetting, setResetting] = useState(false);
   const {
     backendError,
     backendStatus,
     clearNotifications,
     lastSyncedAt,
     notifications,
+    resetDemoState,
     simulationActive,
     toggleSimulation,
   } = useStore();
@@ -62,6 +65,26 @@ export function TopNavbar() {
         >
           <Radio className={cn('h-3 w-3', simulationActive && 'animate-pulse')} />
           {simulationActive ? 'Running...' : 'Simulate'}
+        </button>
+
+        <button
+          onClick={async () => {
+            setResetting(true);
+            try {
+              await resetDemoState();
+            } finally {
+              setResetting(false);
+            }
+          }}
+          className={cn(
+            'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+            resetting
+              ? 'bg-warning/10 text-warning'
+              : 'bg-secondary text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <RotateCcw className={cn('h-3 w-3', resetting && 'animate-spin')} />
+          {resetting ? 'Clearing...' : 'Clear Demo'}
         </button>
 
         {/* Notifications */}

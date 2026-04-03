@@ -28,6 +28,7 @@ import {
 import {
   completeMissionRequest,
   decideResponseAction,
+  resetDemoState as resetDemoStateRequest,
   runDemoPipeline as runDemoPipelineRequest,
 } from '@/lib/api';
 
@@ -324,6 +325,7 @@ interface SOCStore {
   pendingAchievement: Achievement | null;
   rejectResponseAction: (id: string) => Promise<void>;
   responses: PipelineResponse[];
+  resetDemoState: () => Promise<void>;
   responseActions: ResponseAction[];
   runDemoPipeline: () => Promise<void>;
   selectSquadMember: (agentId: string) => void;
@@ -439,20 +441,36 @@ export const useStore = create<SOCStore>((set, get) => ({
   ingestRealtimeMessage: (message) => {
     const timestamp = message.timestamp ?? new Date().toISOString();
 
-    if (message.type === 'init') {
+    if (message.type === 'init' || message.type === 'demo_state_reset') {
       const data = message.data ?? {};
       get().hydrateBackendData({
         achievements: Array.isArray(data.achievements)
           ? (data.achievements as Achievement[])
           : undefined,
+        agents: Array.isArray(data.agents) ? (data.agents as Agent[]) : undefined,
+        alerts: Array.isArray(data.alerts) ? (data.alerts as Alert[]) : undefined,
         gameState:
           typeof data.game_state === 'object' && data.game_state !== null
             ? (data.game_state as Record<string, unknown>)
             : undefined,
+        incidents: Array.isArray(data.incidents) ? (data.incidents as Incident[]) : undefined,
+        memoryEntries: Array.isArray(data.memory_entries)
+          ? (data.memory_entries as MemoryEntry[])
+          : undefined,
         missions: Array.isArray(data.missions) ? (data.missions as Mission[]) : undefined,
         responses: Array.isArray(data.responses) ? (data.responses as PipelineResponse[]) : undefined,
+        responseActions: Array.isArray(data.response_actions)
+          ? (data.response_actions as ResponseAction[])
+          : undefined,
         timestamp,
       });
+      if (message.type === 'demo_state_reset') {
+        set({
+          notifications: 0,
+          pendingAchievement: null,
+          xpEvents: [],
+        });
+      }
       return;
     }
 
@@ -723,6 +741,34 @@ export const useStore = create<SOCStore>((set, get) => ({
       get().setBackendStatus(
         'error',
         error instanceof Error ? error.message : 'Response rejection failed'
+      );
+    }
+  },
+
+  resetDemoState: async () => {
+    try {
+      const payload = await resetDemoStateRequest();
+      get().hydrateBackendData({
+        achievements: payload.achievements as Achievement[],
+        agents: payload.agents as Agent[],
+        alerts: payload.alerts as Alert[],
+        gameState: payload.game_state,
+        incidents: payload.incidents as Incident[],
+        memoryEntries: payload.memory_entries as MemoryEntry[],
+        missions: payload.missions as Mission[],
+        responses: payload.responses as PipelineResponse[],
+        responseActions: payload.response_actions as ResponseAction[],
+        timestamp: payload.timestamp,
+      });
+      set({
+        notifications: 0,
+        pendingAchievement: null,
+        xpEvents: [],
+      });
+    } catch (error) {
+      get().setBackendStatus(
+        'error',
+        error instanceof Error ? error.message : 'Demo reset failed'
       );
     }
   },

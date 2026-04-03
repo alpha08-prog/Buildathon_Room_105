@@ -118,6 +118,20 @@ def _find_by_id(store: List[dict], item_id: str):
     return None
 
 
+def _snapshot_payload():
+    return {
+        "achievements": game_store.all_achievements(),
+        "agents": _pipeline_agents,
+        "alerts": _pipeline_alerts,
+        "game_state": game_store.state.dict(),
+        "incidents": _pipeline_incidents,
+        "memory_entries": _pipeline_memory,
+        "missions": _pipeline_missions,
+        "response_actions": _pipeline_actions,
+        "responses": _pipeline_responses,
+    }
+
+
 # ── Shared ingest helper ──────────────────────────────────────────────────────
 
 async def _ingest_result(result: dict):
@@ -249,6 +263,34 @@ async def get_memory():
 @app.get("/api/responses")
 async def get_responses():
     return {"responses": _pipeline_responses, "count": len(_pipeline_responses)}
+
+
+@app.post("/api/demo/reset")
+async def reset_demo_state():
+    _pipeline_alerts.clear()
+    _pipeline_incidents.clear()
+    _pipeline_agents.clear()
+    _pipeline_actions.clear()
+    _pipeline_memory.clear()
+    _pipeline_missions.clear()
+    _pipeline_responses.clear()
+    _pending_action_contexts.clear()
+    game_store.reset()
+
+    ts = datetime.utcnow().isoformat()
+    payload = _snapshot_payload()
+
+    await connection_manager.broadcast({
+        "type": "demo_state_reset",
+        "data": payload,
+        "timestamp": ts,
+    })
+
+    return {
+        "status": "ok",
+        "timestamp": ts,
+        **payload,
+    }
 
 
 @app.post("/api/response-actions/{action_id}/decision")

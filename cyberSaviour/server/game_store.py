@@ -121,6 +121,11 @@ class GameStore:
         # active_missions lives here too (used by HTTP endpoints)
         self.active_missions: Dict[str, dict] = {}
 
+    def reset(self):
+        self.state = GameState()
+        self._unlocked = {}
+        self.active_missions = {}
+
     # ── XP / level ────────────────────────────────────────────────────────────
 
     def add_xp(self, amount: int, reason: str = "action") -> dict:

@@ -19,7 +19,7 @@ class HumanInLoop(Body):
     def _present_decision(self, decision: dict) -> str:
         lines = [
             '\n' + '='*60,
-            '  ⚠  HUMAN REVIEW REQUIRED',
+            '  [!] HUMAN REVIEW REQUIRED',
             '='*60,
             f"  Action    : {decision.get('action', '?').upper()}",
             f"  Priority  : {decision.get('priority', '?').upper()}",
