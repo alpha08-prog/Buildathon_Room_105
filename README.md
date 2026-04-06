@@ -247,17 +247,6 @@ Open a pull request and the team will review it.
 
 ---
 
-## 👨‍💻 Team
-
-| Role | Responsibility |
-|---|---|
-| 🧑‍🏫 Mentor / Professor | Guidance & oversight |
-| 👨‍💻 Team Lead (Web Developer) | Architecture & backend |
-| 📱 App Developer | Mobile & integrations |
-| 🌐 Web Developer | Frontend & UI |
-
----
-
 ## 📜 License
 
 This project was built for **Buildathon 2026** and is intended for educational and innovation purposes.
