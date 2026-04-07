@@ -12,7 +12,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { StatCard, GlassCard, SeverityBadge, StatusDot } from '@/components/ui/stat-card';
 import { useStore } from '@/store/useStore';
 import { rankTiers } from '@/data/mockData';
-import type { Alert } from '@/data/mockData';
+import type { Alert, Mission, SquadAgent } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { AttackGraph } from '@/components/AttackGraph';
 import { StreakFlame } from '@/components/animations/StreakFlame';
@@ -147,7 +147,7 @@ function ComboBadge({ multiplier }: { multiplier: number }) {
 }
 
 // ── Active Mission Card ──────────────────────────────────────────────────────
-function ActiveMissionCard({ mission, index }: { mission: any; index: number }) {
+function ActiveMissionCard({ mission, index }: { mission: Mission; index: number }) {
   const isBoss   = mission.bossFight;
   const src      = detectMissionSource(mission);
   const timeLeft = mission.timeLimit
@@ -236,7 +236,7 @@ function ActiveMissionCard({ mission, index }: { mission: any; index: number }) 
 }
 
 // ── Squad Status Mini ────────────────────────────────────────────────────────
-function SquadMiniStatus({ agent }: { agent: any }) {
+function SquadMiniStatus({ agent }: { agent: SquadAgent }) {
   const statusColor = agent.status === 'ready' ? 'hsl(155 100% 50%)' : agent.status === 'analyzing' ? 'hsl(217 91% 60%)' : 'hsl(48 96% 53%)';
 
   return (

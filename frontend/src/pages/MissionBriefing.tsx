@@ -11,7 +11,7 @@ import { MissionPhaseCascade } from '@/components/3d/MissionPhaseCascade';
 import { GlassCard } from '@/components/ui/stat-card';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
-import type { MissionPhase } from '@/data/mockData';
+import type { MissionObjective, MissionPhase, ResponseAction } from '@/data/mockData';
 
 // ── Phase order ──────────────────────────────────────────────────────────────
 const PHASES: MissionPhase[] = [
@@ -103,8 +103,8 @@ function PhaseStepper({ current }: { current: MissionPhase }) {
 
 // ── Objective Item ────────────────────────────────────────────────────────────
 function ObjectiveItem({
-  objective, index, missionComplete,
-}: { objective: any; index: number; missionComplete: boolean }) {
+  objective, index,
+}: { objective: MissionObjective; index: number }) {
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
@@ -139,7 +139,7 @@ function ObjectiveItem({
 // ── Decision Point Modal ──────────────────────────────────────────────────────
 function DecisionModal({
   action, onApprove, onReject, onClose,
-}: { action: any; onApprove: () => void; onReject: () => void; onClose: () => void }) {
+}: { action: ResponseAction; onApprove: () => void; onReject: () => void; onClose: () => void }) {
   return (
     <motion.div
       className="fixed inset-0 z-[8000] flex items-center justify-center"
@@ -207,7 +207,7 @@ export default function MissionBriefing() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { missions, responseActions, completeMission, advanceMissionPhase, approveResponseAction, rejectResponseAction } = useStore();
-  const [selectedAction, setSelectedAction] = useState<any>(null);
+  const [selectedAction, setSelectedAction] = useState<ResponseAction | null>(null);
 
   const mission = missions.find((m) => m.id === id);
 
@@ -349,7 +349,7 @@ export default function MissionBriefing() {
             </div>
             <div className="space-y-2">
               {mission.objectives.map((obj, i) => (
-                <ObjectiveItem key={obj.id} objective={obj} index={i} missionComplete={allObjectivesDone} />
+                <ObjectiveItem key={obj.id} objective={obj} index={i} />
               ))}
             </div>
           </GlassCard>
