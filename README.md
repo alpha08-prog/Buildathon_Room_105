@@ -1,125 +1,264 @@
-# 🛡️ Agentic AI for SOCs (CyberSaviour) 🛡️
-
-![CyberSaviour Banner](cybersaviour_banner.png)
+# 🛡️ CyberSaviour — Agentic AI for SOCs
 
 > **"Turning Security Analysts into Cyber Warriors."**
 
-**Agentic AI for SOCs (CyberSaviour)** is an elite, multi-agent automated Security Operations Center (SOC) designed to bridge the gap between complex security data and actionable analyst workflows. Built on a powerful Python/FastAPI backend and a high-fidelity React frontend, it transforms raw security events into immersive "Missions," "Incidents," and "Tactical Responses."
+🎥 **Demo Video:** [Watch on Google Drive](https://drive.google.com/file/d/10ComO-U821NwsR17WvOrGK55NNjZITuM/view?usp=sharing)
 
 ---
 
-## 🚀 Vision
+## 🚀 Overview
 
-In a world where security analysts are overwhelmed by alert fatigue, **Agentic AI for SOCs (CyberSaviour)** brings order to the chaos by:
-1. **Automated Triage**: A multi-agent AI pipeline (Log, Correlation, Threat agents) handles the heavy lifting of reasoning.
-2. **Gamified Workflows**: Dry security tickets are translated into engaging missions with XP, achievements, and squad-based progression.
-3. **Closing the Loop**: Human-in-the-loop response actions give analysts full control without the manual drudgery.
+**CyberSaviour** is an **agentic AI-powered Security Operations Center (SOC)** designed to transform overwhelming security data into **actionable intelligence and immersive workflows**.
 
----
+It combines:
 
-## 🔥 Key Pillars & Features
+- ⚡ Real-time analysis
+- 🧠 Multi-agent AI reasoning
+- 🎮 Gamified analyst experience
 
-| Feature | Description |
-| :--- | :--- |
-| **🧠 Multi-Agent Pipeline** | 10+ specialized agents (Detection, Correlation, Threat, Memory, Decision, Action) operating in concert. |
-| **🎮 Gamified Dashboard** | A cinematic "Command Center" featuring mission briefings, squad status, and real-time XP tracking. |
-| **🔍 Forensic Bridge** | Integrated `Cybersleuth` logic for PCAP analysis, automatically extracting CVE and service context. |
-| **⚔️ CybORG Integration** | Run complex cyber-range simulations from the dashboard to train analysts on multi-stage attack scenarios. |
-| **📖 Knowledge Codex** | A memory layer that surfaces similar past incidents and recommended playbooks based on historical context. |
-| **📊 Executive Summary** | One-click report generation highlighting business impact metrics (time saved, risk prevented). |
+The result: **faster detection, smarter response, and reduced analyst fatigue.**
 
 ---
 
-## 🏗️ Technical Architecture
+## 🎯 Problem Statement
 
-### 📁 Repository Structure
+Security analysts today face:
 
-```text
-.
-├── 🛡️ cyberSaviour/          # Core Backend (FastAPI, AI Agents, Pipeline)
-│   ├── agents/               # Specialized AI reasoning units (Log, Correlation, God-Level Orchestration)
-│   ├── ingestion/            # Raw data & log handlers
-│   ├── integrations/         # Cybersleuth & CybORG adapters
-│   ├── memory/               # Historical context engine
-│   └── server/               # WebSocket & REST API
-├── 💻 frontend/              # High-Fidelity UI (React + Vite + Framer Motion)
-│   ├── src/components/       # Modular UI with cyberpunk aesthetics
-│   ├── src/pages/           # Mission Control, Forensic, Sim, Dashboard
-│   └── src/store/           # Centralized Zustand state
-├── 🕵️ Cybersleuth_Forensic/  # Standalone Forensic Analysis Module
-└── 🌐 CybORG/                 # Cyber Operations Research Gym (Simulator)
+- Alert fatigue from massive log streams
+- Fragmented tools and workflows
+- Slow manual triage and response
+
+---
+
+## 💡 Solution
+
+CyberSaviour introduces a **multi-agent AI pipeline + interactive UI** that:
+
+- Automates threat detection & correlation
+- Converts incidents into **missions & tasks**
+- Provides **real-time visualization + insights**
+- Keeps human analysts **in control of decisions**
+
+---
+
+## 🔥 Key Features
+
+### 🧠 Multi-Agent AI System
+
+| Agent | Role |
+|---|---|
+| Detection Agent | Identifies threats from raw data |
+| Correlation Agent | Links related events across sources |
+| Threat Intelligence Agent | Enriches alerts with external context |
+| Memory Agent | Retains historical incident knowledge |
+| Decision Agent | Recommends response actions |
+| Action Agent | Executes approved countermeasures |
+
+### 🎮 Gamified SOC Dashboard
+
+- Mission-based workflows
+- XP & achievement system
+- Squad-based progress tracking
+
+### 🔍 Forensic Analysis Engine
+
+- PCAP parsing using Scapy
+- CVE extraction & service mapping
+- Attack flow reconstruction
+
+### ⚔️ Cyber Simulation (CybORG)
+
+- Run attack-defense simulations
+- Train analysts on real-world scenarios
+
+### 📖 Knowledge Memory Layer
+
+- Stores historical incidents
+- Suggests similar past attacks
+- Recommends response playbooks
+
+### 📊 Executive Insights
+
+- Risk reduction metrics
+- Time saved analytics
+- Business impact summaries
+
+---
+
+## 🏗️ Architecture Overview
+
+```
+                ┌──────────────────────────┐
+                │      Frontend (UI)       │
+                │ React + TS + Three.js    │
+                └────────────┬─────────────┘
+                             │
+                    WebSockets + REST
+                             │
+                ┌────────────▼────────────┐
+                │    FastAPI Backend      │
+                │  Async APIs + Routing   │
+                └────────────┬────────────┘
+                             │
+        ┌────────────────────┼────────────────────┐
+        │                    │                    │
+ ┌──────▼──────┐     ┌──────▼──────┐     ┌──────▼──────┐
+ │  AI Agents  │     │  Memory DB  │     │  Forensics  │
+ │ Multi-Agent │     │   SQLite    │     │   Scapy     │
+ └─────────────┘     └─────────────┘     └─────────────┘
+                             │
+                     ┌───────▼───────┐
+                     │  Gemini LLM   │
+                     │  Reasoning    │
+                     └───────────────┘
 ```
 
 ---
 
-## 🛠️ Tech Stack & Dependencies
+## 📁 Project Structure
 
-### **Backend**
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) 
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![Google Gemini](https://img.shields.io/badge/Google%20Gemini-4285F4?style=for-the-badge&logo=google&logoColor=white)
-![Scapy](https://img.shields.io/badge/Scapy-EE1F26?style=for-the-badge&logo=scapy&logoColor=white)
-
-### **Frontend**
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Framer Motion](https://img.shields.io/badge/Framer_Motion-0055FF?style=for-the-badge&logo=framer&logoColor=white)
+```
+.
+├── 🛡️  cyberSaviour/
+│   ├── agents/               # Multi-agent AI system
+│   ├── ingestion/            # Log & data ingestion
+│   ├── integrations/         # External tool connectors
+│   ├── memory/               # Incident memory layer
+│   └── server/               # FastAPI app & routing
+├── 💻  frontend/
+│   ├── src/components/       # Reusable UI components
+│   ├── src/pages/            # Route-level pages
+│   └── src/store/            # Zustand global state
+├── 🕵️  Cybersleuth_Forensic/ # Forensic analysis engine
+└── 🌐  CybORG/               # Attack-defense simulation
+```
 
 ---
 
-## ⚡ Quick Start
+## 🛠️ Tech Stack
 
-### 1️⃣ Clone & Initialize
+### ⚙️ Backend — Real-time Analysis Engine
+
+| Technology | Purpose |
+|---|---|
+| **Rust** | High-performance agent orchestration |
+| **Python 3.11 + FastAPI** | Async REST APIs (22+ endpoints) |
+| **Gemini 1.5 Flash** | LLM-based reasoning with retry/backoff |
+| **SQLite** (`incidents.db`) | Persistent memory layer |
+| **WebSocket Broadcast** | Real-time updates to clients |
+| **Scapy** | Network packet inspection & analysis |
+
+### 🎨 Frontend — Analyst Experience
+
+| Technology | Purpose |
+|---|---|
+| **React 18 + TypeScript** | Scalable UI architecture |
+| **Vite** | Fast dev server with HMR |
+| **Zustand** | Lightweight global state management |
+| **Three.js** | 3D threat visualization |
+| **D3 + Recharts** | Graphs & analytics |
+| **Framer Motion** | Animations & UI transitions |
+
+---
+
+## ⚡ Getting Started
+
+### 1️⃣ Clone Repository
+
 ```bash
 git clone <your-repo-url>
 cd Buildathon_Room_105
 ```
 
 ### 2️⃣ Backend Setup
+
 ```bash
 cd cyberSaviour
-# Create your .env file
+
+# Create environment file
 echo "API=your_gemini_api_key" > .env
-# Install & Run
-pip install -r ../requirements.txt 
+
+# Install dependencies
+pip install -r ../requirements.txt
+
+# Run server
 uvicorn server.app:app --reload --port 8000
 ```
 
 ### 3️⃣ Frontend Setup
+
 ```bash
 cd frontend
+
 npm install
 npm run dev
 ```
 
-> **Access points:**
-> - Dashboard: `http://localhost:8080/dashboard`
-> - Simulation: `http://localhost:8080/cyborg`
-> - Forensic: `http://localhost:8080/forensic`
+### 🌐 Access the Application
+
+| Module | URL |
+|---|---|
+| Dashboard | http://localhost:8080/dashboard |
+| Simulation | http://localhost:8080/cyborg |
+| Forensics | http://localhost:8080/forensic |
 
 ---
 
-## 📈 Evaluation & Metrics (Judges Info)
+## 📊 Evaluation Metrics
 
-- **Squad Coordination Score**: Multi-agent reasoning reduces analysis overhead significantly compared to manual triage.
-- **Blast Radius Reduction**: Proactive isolation and response actions prevent lateral movement in seconds.
-- **Risk Prevention**: Proactive hunting and correlation catch threats before they escalate.
+| Metric | Impact |
+|---|---|
+| Squad Coordination | Reduced manual analyst effort |
+| Blast Radius Reduction | Faster threat containment |
+| Risk Prevention | Earlier threat detection |
 
 ---
 
 ## 🔮 Roadmap
 
-- [ ] **Persistent Database**: PostgreSQL migration for long-term state.
-- [ ] **Advanced Boss-Incidents**: Narrative-driven elite threats.
-- [ ] **SIEM Hooking**: Direct ingest from industry tools (Splunk, Sentinel).
+- [ ] PostgreSQL integration (scalable memory)
+- [ ] Advanced "Boss-Level" incidents
+- [ ] SIEM integrations (Splunk, Sentinel)
+- [ ] Multi-tenant SOC support
+- [ ] Role-based access control
 
 ---
 
-## 🤝 Support
+## 🧪 Future Enhancements
 
-For any questions, reach out to the **Agentic AI for SOCs (CyberSaviour) Dev Team** during the Buildathon!
+- AI-driven auto-remediation
+- Real-time anomaly detection models
+- Cross-org threat intelligence sharing
 
 ---
 
-*Made with ❤️ for the Buildathon 2026*
+## 🤝 Contributing
+
+Contributions are welcome!
+
+```bash
+# Fork the repo, then:
+git checkout -b feature-name
+git commit -m "Added feature"
+git push origin feature-name
+```
+
+Open a pull request and the team will review it.
+
+---
+
+## 📜 License
+
+This project was built for **Buildathon 2026** and is intended for educational and innovation purposes.
+
+---
+
+## 💬 Support
+
+For queries, contact the **CyberSaviour Dev Team**.
+
+---
+
+> ⭐ CyberSaviour is not just a tool — it is a next-generation SOC experience combining AI, visualization, and human intelligence.
+>
+> *Made with dedication for Buildathon 2026.*
