@@ -8,6 +8,7 @@ charset-normalizer==3.4.6
 cryptography==46.0.6
 distro==1.9.0
 dotenv==0.9.9
+fastapi>=0.115,<1.0
 google-auth==2.49.1
 google-genai==1.69.0
 h11==0.16.0
@@ -38,6 +39,7 @@ typing_extensions==4.15.0
 ua-parser==1.0.1
 ua-parser-builtins==202603
 urllib3==2.6.3
+uvicorn>=0.30,<1.0
 user-agents==2.2.0
 watchdog==6.0.0
 websockets==16.0

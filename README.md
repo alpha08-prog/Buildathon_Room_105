@@ -1,9 +1,6 @@
 # 🛡️ CyberSaviour — Agentic AI for SOCs
 
 > **"Turning Security Analysts into Cyber Warriors."**
-
-🎥 **Demo Video:** [Watch on Google Drive](https://drive.google.com/file/d/10ComO-U821NwsR17WvOrGK55NNjZITuM/view?usp=sharing)
-
 ---
 
 ## 🚀 Overview
@@ -262,3 +259,143 @@ For queries, contact the **CyberSaviour Dev Team**.
 > ⭐ CyberSaviour is not just a tool — it is a next-generation SOC experience combining AI, visualization, and human intelligence.
 >
 > *Made with dedication for Buildathon 2026.*
+
+---
+
+## Demo Setup on a Separate PC/Laptop
+
+This section is for running the demo on a fresh machine without changing the project code.
+
+### Hardware Requirements
+
+| Component | Minimum | Recommended |
+|---|---|---|
+| CPU | 64-bit dual-core processor | 64-bit quad-core Intel i5 / Ryzen 5 or better |
+| RAM | 8 GB | 16 GB |
+| Storage | 5 GB free disk space | 10 GB+ free disk space |
+| Network | Internet connection for dependency install | Stable broadband connection |
+| GPU | Not required | Not required |
+
+### Software Requirements
+
+- **Operating System:** Windows 10/11, macOS, or Linux
+- **Git:** Required to clone the repository
+- **Python:** **3.11**
+- **Node.js:** **20.x or newer**
+- **npm:** Comes with Node.js
+- **Browser:** Latest Chrome / Edge / Firefox
+- **Gemini API key:** Recommended for the full AI-assisted experience (`API` value in `.env`)
+
+### Ports Used by the Demo
+
+- `8000` -> FastAPI backend
+- `8080` -> Vite frontend
+
+Make sure these ports are free on the machine before starting the demo.
+
+### Fresh Machine Installation
+
+#### 1. Clone the repository
+
+```bash
+git clone <your-repo-url>
+cd Buildathon_Room_105
+```
+
+#### 2. Create and activate a Python virtual environment
+
+**Windows PowerShell**
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+```
+
+**macOS / Linux**
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+```
+
+#### 3. Install backend dependencies
+
+```bash
+pip install -r requirements.txt
+pip install fastapi uvicorn
+```
+
+Note: `fastapi` and `uvicorn` are required to run the backend demo server.
+
+#### 4. Create the backend environment file
+
+Create `cyberSaviour/.env` with:
+
+```env
+API=your_gemini_api_key
+```
+
+Note:
+
+- The demo can still use rule-based fallbacks in some flows if the Gemini API is unavailable.
+- For the full intended multi-agent AI demo, providing the Gemini API key is strongly recommended.
+
+#### 5. Install frontend dependencies
+
+```bash
+cd frontend
+npm install
+cd ..
+```
+
+### How to Run the Demo
+
+Use **two terminals** on the separate PC/laptop.
+
+#### Terminal 1 -> Start backend
+
+```bash
+cd cyberSaviour
+..\.venv\Scripts\python -m uvicorn server.app:app --reload --port 8000
+```
+
+If you are not on Windows PowerShell, you can also use:
+
+```bash
+cd cyberSaviour
+python -m uvicorn server.app:app --reload --port 8000
+```
+
+#### Terminal 2 -> Start frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+### URLs to Open During the Demo
+
+| Module | URL |
+|---|---|
+| Main dashboard | http://localhost:8080/dashboard |
+| CybORG simulation | http://localhost:8080/cyborg |
+| Forensic analysis | http://localhost:8080/forensic |
+| System status | http://localhost:8080/status |
+| Backend health check | http://localhost:8000/health |
+
+### Demo Readiness Checklist
+
+- Backend starts successfully on `http://localhost:8000`
+- Frontend starts successfully on `http://localhost:8080`
+- `cyberSaviour/.env` exists
+- Python virtual environment is activated
+- Dependencies are installed with `pip install -r requirements.txt` and `npm install`
+- Ports `8000` and `8080` are not blocked
+
+### Notes for Demo Day
+
+- The frontend defaults to calling `http://localhost:8000`, so run frontend and backend on the same machine unless you intentionally reconfigure the API base URL.
+- The repo already contains bundled benchmark/sample data for the CybORG and forensic demo flows.
+- No dedicated GPU is required for the demo.
