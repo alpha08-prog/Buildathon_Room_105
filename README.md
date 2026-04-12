@@ -1,348 +1,243 @@
-# 🛡️ CyberSaviour — Agentic AI for SOCs
+# CyberSaviour
 
-> **"Turning Security Analysts into Cyber Warriors."**
----
+CyberSaviour is an agentic AI Security Operations Center (SOC) prototype built for the DS308 Data Security and Privacy course project. It combines real-time event triage, multi-agent incident reasoning, long-term security memory, forensic PCAP analysis, attack-defense simulation, and a gamified analyst dashboard into one end-to-end platform.
 
-## 🚀 Overview
+Detailed course report: [PROJECT_REPORT_DS308.md](PROJECT_REPORT_DS308.md)
 
-**CyberSaviour** is an **agentic AI-powered Security Operations Center (SOC)** designed to transform overwhelming security data into **actionable intelligence and immersive workflows**.
+## Table of Contents
 
-It combines:
+- [What This Project Does](#what-this-project-does)
+- [Core Capabilities](#core-capabilities)
+- [Architecture](#architecture)
+- [Pipeline Flow](#pipeline-flow)
+- [Tech Stack](#tech-stack)
+- [Repository Layout](#repository-layout)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Running the Project](#running-the-project)
+- [How to Use the Platform](#how-to-use-the-platform)
+- [API Overview](#api-overview)
+- [Data and Persistence](#data-and-persistence)
+- [Development Notes](#development-notes)
+- [Known Limitations](#known-limitations)
+- [Future Improvements](#future-improvements)
 
-- ⚡ Real-time analysis
-- 🧠 Multi-agent AI reasoning
-- 🎮 Gamified analyst experience
+## What This Project Does
 
-The result: **faster detection, smarter response, and reduced analyst fatigue.**
+Modern SOC workflows are noisy, fragmented, and often manually intensive. CyberSaviour is designed as a unified workflow where raw events become analyst-facing incidents through a staged pipeline:
 
----
+1. Detect suspicious activity from incoming events.
+2. Correlate repeated or related behavior.
+3. Enrich incidents with threat intelligence and MITRE ATT&CK context.
+4. Recall historical incidents from persistent memory.
+5. Recommend a response.
+6. Pause for human approval when the action is high risk.
+7. Generate an incident report and push updates to the dashboard in real time.
 
-## 🎯 Problem Statement
+The system also includes:
 
-Security analysts today face:
+- forensic investigation using bundled benchmark PCAP datasets
+- CybORG-inspired cyber attack simulation
+- a React dashboard with missions, XP, streaks, achievements, and analyst workflows
 
-- Alert fatigue from massive log streams
-- Fragmented tools and workflows
-- Slow manual triage and response
+## Core Capabilities
 
----
+- Multi-agent SOC pipeline with dedicated stages for detection, correlation, threat enrichment, memory, decisioning, action, and reporting
+- FastAPI backend with REST APIs and WebSocket updates
+- React + TypeScript frontend for live SOC visualization
+- SQLite-backed long-term memory for historical incident recall
+- Human-in-the-loop approval for risky actions like blocking or isolation
+- Forensic analysis bridge that extracts metadata from PCAPs using Scapy
+- CybORG-compatible scenario simulator for training and demo traffic generation
+- Gamified UX with missions, ranks, XP, achievements, and squad-style agent views
+- Graceful fallback behavior when LLM enrichment is unavailable or rate-limited
 
-## 💡 Solution
+## Architecture
 
-CyberSaviour introduces a **multi-agent AI pipeline + interactive UI** that:
+### High-Level System Architecture
 
-- Automates threat detection & correlation
-- Converts incidents into **missions & tasks**
-- Provides **real-time visualization + insights**
-- Keeps human analysts **in control of decisions**
+```mermaid
+flowchart LR
+    U[Analyst] --> F[Frontend Dashboard<br/>React + TypeScript + Vite]
+    F <--> |REST + WebSocket| B[FastAPI Backend<br/>server/app.py]
 
----
+    B --> P[Pipeline Bridge<br/>server/pipeline_bridge.py]
+    P --> L[Log Agent]
+    P --> C[Correlation Agent]
+    P --> T[Threat Agent]
+    P --> M[Memory Layer]
+    P --> D[Decision Layer]
+    P --> H[Human-in-the-Loop]
+    P --> A[Action Layer]
+    P --> R[Report Agent]
+    P --> X[Response Agent]
 
-## 🔥 Key Features
+    M <--> S[(SQLite Incident Memory<br/>memory/incidents.db)]
 
-### 🧠 Multi-Agent AI System
+    B --> Y[Forensic Bridge<br/>integrations/cybersleuth_bridge.py]
+    Y --> YD[Bundled PCAP Benchmarks<br/>Cybersleuth_Forensic_Agent/data]
 
-| Agent | Role |
+    B --> Z[CybORG Scenario Bridge<br/>integrations/cyborg_bridge.py]
+    Z --> ZS[Built-in Scenario Simulator]
+
+    O[Optional Rust Orchestrator] --> |POST /api/pipeline/result| B
+```
+
+### Runtime Data Flow
+
+```mermaid
+flowchart TD
+    E[Raw Events] --> I[Pipeline Run]
+    I --> L1[Detection and Alerting]
+    L1 --> C1[Correlation and Severity Scoring]
+    C1 --> T1[Threat Enrichment and MITRE Mapping]
+    T1 --> M1[Short-Term + Long-Term Memory Lookup]
+    M1 --> D1[Decision Recommendation]
+    D1 --> Q{High-risk action?}
+    Q -- Yes --> H1[Human Approval Required]
+    Q -- No --> A1[Execute or Simulate Action]
+    H1 --> A1
+    A1 --> R1[Incident Report]
+    R1 --> X1[Frontend-shaped Response Payload]
+    X1 --> WS[REST + WebSocket Sync]
+    WS --> UI[Dashboard Pages]
+```
+
+## Pipeline Flow
+
+The main backend pipeline lives across `cyberSaviour/agents`, `cyberSaviour/memory`, and `cyberSaviour/pipeline`.
+
+```text
+Raw Events
+  -> LogAgent
+  -> CorrelationAgent
+  -> ThreatAgent
+  -> MemoryLayer
+  -> DecisionLayer
+  -> HumanInLoop
+  -> ActionLayer
+  -> ReportAgent
+  -> ResponseAgent
+```
+
+### Stage Responsibilities
+
+| Stage | Purpose |
 |---|---|
-| Detection Agent | Identifies threats from raw data |
-| Correlation Agent | Links related events across sources |
-| Threat Intelligence Agent | Enriches alerts with external context |
-| Memory Agent | Retains historical incident knowledge |
-| Decision Agent | Recommends response actions |
-| Action Agent | Executes approved countermeasures |
+| Log Agent | Converts raw events into initial alerts such as failed login, SQL injection, recon, and suspicious network activity |
+| Correlation Agent | Groups related events by source and behavior, computes threat score and severity |
+| Threat Agent | Adds MITRE ATT&CK-style context and higher-level threat interpretation |
+| Memory Layer | Writes incidents to SQLite and recalls recent or repeat-offender history |
+| Decision Layer | Chooses a recommended response and decides whether human approval is needed |
+| Human-in-the-Loop | Holds sensitive actions for analyst review |
+| Action Layer | Simulates or records action execution |
+| Report Agent | Produces structured incident reports |
+| Response Agent | Shapes final analyst-facing response data for the dashboard |
 
-### 🎮 Gamified SOC Dashboard
+## Tech Stack
 
-- Mission-based workflows
-- XP & achievement system
-- Squad-based progress tracking
+### Backend
 
-### 🔍 Forensic Analysis Engine
+- Python
+- FastAPI
+- Uvicorn
+- SQLite
+- Scapy
+- WebSockets
+- Google Gemini integration with retry logic and fallback behavior
 
-- PCAP parsing using Scapy
-- CVE extraction & service mapping
-- Attack flow reconstruction
+### Frontend
 
-### ⚔️ Cyber Simulation (CybORG)
+- React 18
+- TypeScript
+- Vite
+- Zustand
+- TanStack Query
+- Tailwind CSS
+- shadcn-style component structure
+- Framer Motion
+- Three.js / React Three Fiber
 
-- Run attack-defense simulations
-- Train analysts on real-world scenarios
+### Simulation and Forensics
 
-### 📖 Knowledge Memory Layer
+- CybORG-inspired scenario simulation bridge
+- Bundled forensic benchmark datasets in `Cybersleuth_Forensic_Agent/data`
+- Scapy-based packet metadata extraction
 
-- Stores historical incidents
-- Suggests similar past attacks
-- Recommends response playbooks
+### Optional / Advanced
 
-### 📊 Executive Insights
+- Rust orchestrator under `cyberSaviour/orchestrator`
 
-- Risk reduction metrics
-- Time saved analytics
-- Business impact summaries
+## Repository Layout
 
----
-
-## 🏗️ Architecture Overview
-
-```
-                ┌──────────────────────────┐
-                │      Frontend (UI)       │
-                │ React + TS + Three.js    │
-                └────────────┬─────────────┘
-                             │
-                    WebSockets + REST
-                             │
-                ┌────────────▼────────────┐
-                │    FastAPI Backend      │
-                │  Async APIs + Routing   │
-                └────────────┬────────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
- ┌──────▼──────┐     ┌──────▼──────┐     ┌──────▼──────┐
- │  AI Agents  │     │  Memory DB  │     │  Forensics  │
- │ Multi-Agent │     │   SQLite    │     │   Scapy     │
- └─────────────┘     └─────────────┘     └─────────────┘
-                             │
-                     ┌───────▼───────┐
-                     │  Gemini LLM   │
-                     │  Reasoning    │
-                     └───────────────┘
-```
-
----
-
-## 📁 Project Structure
-
-```
+```text
 .
-├── 🛡️  cyberSaviour/
-│   ├── agents/               # Multi-agent AI system
-│   ├── ingestion/            # Log & data ingestion
-│   ├── integrations/         # External tool connectors
-│   ├── memory/               # Incident memory layer
-│   └── server/               # FastAPI app & routing
-├── 💻  frontend/
-│   ├── src/components/       # Reusable UI components
-│   ├── src/pages/            # Route-level pages
-│   └── src/store/            # Zustand global state
-├── 🕵️  Cybersleuth_Forensic/ # Forensic analysis engine
-└── 🌐  CybORG/               # Attack-defense simulation
+|-- cyberSaviour/
+|   |-- agents/                  # Detection, threat, response, report, LLM helpers
+|   |-- ingestion/               # Event parsing and sample log inputs
+|   |-- integrations/            # CybORG and Cybersleuth bridges
+|   |-- memory/                  # Short-term + SQLite-backed long-term memory
+|   |-- orchestrator/            # Optional Rust worker/orchestrator
+|   |-- pipeline/                # Decision, HITL, action stages
+|   |-- server/                  # FastAPI app, API routes, WebSocket manager
+|   `-- main.py                  # CLI pipeline demo runner
+|-- frontend/                    # Analyst dashboard
+|-- Cybersleuth_Forensic_Agent/  # Benchmark datasets and forensic agent assets
+|-- CybORG/                      # Vendored CybORG assets and references
+|-- docs/                        # Supporting notes and references
+|-- PROJECT_REPORT_DS308.md      # Full academic report
+|-- README.md
+`-- requirements.txt             # Python dependencies for the integrated backend
 ```
 
----
+## Prerequisites
 
-## 🛠️ Tech Stack
+Install these before running the full platform:
 
-### ⚙️ Backend — Real-time Analysis Engine
+- Python 3.10 or newer
+- Node.js 18 or newer
+- npm
 
-| Technology | Purpose |
-|---|---|
-| **Rust** | High-performance agent orchestration |
-| **Python 3.11 + FastAPI** | Async REST APIs (22+ endpoints) |
-| **Gemini 1.5 Flash** | LLM-based reasoning with retry/backoff |
-| **SQLite** (`incidents.db`) | Persistent memory layer |
-| **WebSocket Broadcast** | Real-time updates to clients |
-| **Scapy** | Network packet inspection & analysis |
+Optional:
 
-### 🎨 Frontend — Analyst Experience
+- Rust toolchain if you want to work with `cyberSaviour/orchestrator`
+- A Gemini API key if you want live LLM enrichment instead of fallback-only behavior
 
-| Technology | Purpose |
-|---|---|
-| **React 18 + TypeScript** | Scalable UI architecture |
-| **Vite** | Fast dev server with HMR |
-| **Zustand** | Lightweight global state management |
-| **Three.js** | 3D threat visualization |
-| **D3 + Recharts** | Graphs & analytics |
-| **Framer Motion** | Animations & UI transitions |
+## Installation
 
----
-
-## ⚡ Getting Started
-
-### 1️⃣ Clone Repository
+### 1. Clone the repository
 
 ```bash
 git clone <your-repo-url>
 cd Buildathon_Room_105
 ```
 
-### 2️⃣ Backend Setup
+### 2. Create a Python virtual environment
 
-```bash
-cd cyberSaviour
-
-# Create environment file
-echo "API=your_gemini_api_key" > .env
-
-# Install dependencies
-pip install -r ../requirements.txt
-
-# Run server
-uvicorn server.app:app --reload --port 8000
-```
-
-### 3️⃣ Frontend Setup
-
-```bash
-cd frontend
-
-npm install
-npm run dev
-```
-
-### 🌐 Access the Application
-
-| Module | URL |
-|---|---|
-| Dashboard | http://localhost:8080/dashboard |
-| Simulation | http://localhost:8080/cyborg |
-| Forensics | http://localhost:8080/forensic |
-
----
-
-## 📊 Evaluation Metrics
-
-| Metric | Impact |
-|---|---|
-| Squad Coordination | Reduced manual analyst effort |
-| Blast Radius Reduction | Faster threat containment |
-| Risk Prevention | Earlier threat detection |
-
----
-
-## 🔮 Roadmap
-
-- [ ] PostgreSQL integration (scalable memory)
-- [ ] Advanced "Boss-Level" incidents
-- [ ] SIEM integrations (Splunk, Sentinel)
-- [ ] Multi-tenant SOC support
-- [ ] Role-based access control
-
----
-
-## 🧪 Future Enhancements
-
-- AI-driven auto-remediation
-- Real-time anomaly detection models
-- Cross-org threat intelligence sharing
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome!
-
-```bash
-# Fork the repo, then:
-git checkout -b feature-name
-git commit -m "Added feature"
-git push origin feature-name
-```
-
-Open a pull request and the team will review it.
-
----
-
-## 📜 License
-
-This project was built for **Buildathon 2026** and is intended for educational and innovation purposes.
-
----
-
-## 💬 Support
-
-For queries, contact the **CyberSaviour Dev Team**.
-
----
-
-> ⭐ CyberSaviour is not just a tool — it is a next-generation SOC experience combining AI, visualization, and human intelligence.
->
-> *Made with dedication for Buildathon 2026.*
-
----
-
-## Demo Setup on a Separate PC/Laptop
-
-This section is for running the demo on a fresh machine without changing the project code.
-
-### Hardware Requirements
-
-| Component | Minimum | Recommended |
-|---|---|---|
-| CPU | 64-bit dual-core processor | 64-bit quad-core Intel i5 / Ryzen 5 or better |
-| RAM | 8 GB | 16 GB |
-| Storage | 5 GB free disk space | 10 GB+ free disk space |
-| Network | Internet connection for dependency install | Stable broadband connection |
-| GPU | Not required | Not required |
-
-### Software Requirements
-
-- **Operating System:** Windows 10/11, macOS, or Linux
-- **Git:** Required to clone the repository
-- **Python:** **3.11**
-- **Node.js:** **20.x or newer**
-- **npm:** Comes with Node.js
-- **Browser:** Latest Chrome / Edge / Firefox
-- **Gemini API key:** Recommended for the full AI-assisted experience (`API` value in `.env`)
-
-### Ports Used by the Demo
-
-- `8000` -> FastAPI backend
-- `8080` -> Vite frontend
-
-Make sure these ports are free on the machine before starting the demo.
-
-### Fresh Machine Installation
-
-#### 1. Clone the repository
-
-```bash
-git clone <your-repo-url>
-cd Buildathon_Room_105
-```
-
-#### 2. Create and activate a Python virtual environment
-
-**Windows PowerShell**
+Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
 ```
 
-**macOS / Linux**
+macOS/Linux:
 
 ```bash
-python3.11 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
 ```
 
-#### 3. Install backend dependencies
+### 3. Install backend dependencies
+
+Run this from the repository root:
 
 ```bash
 pip install -r requirements.txt
-pip install fastapi uvicorn
 ```
 
-Note: `fastapi` and `uvicorn` are required to run the backend demo server.
-
-#### 4. Create the backend environment file
-
-Create `cyberSaviour/.env` with:
-
-```env
-API=your_gemini_api_key
-```
-
-Note:
-
-- The demo can still use rule-based fallbacks in some flows if the Gemini API is unavailable.
-- For the full intended multi-agent AI demo, providing the Gemini API key is strongly recommended.
-
-#### 5. Install frontend dependencies
+### 4. Install frontend dependencies
 
 ```bash
 cd frontend
@@ -350,52 +245,283 @@ npm install
 cd ..
 ```
 
-### How to Run the Demo
+## Configuration
 
-Use **two terminals** on the separate PC/laptop.
+The project can run in a mostly local/demo mode without heavy configuration, but these settings are useful.
 
-#### Terminal 1 -> Start backend
+### Environment Variables
+
+Create a `.env` file in the repository root if you want optional LLM enrichment:
+
+```env
+API=your_gemini_api_key_here
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+### What These Variables Do
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `API` | No | Gemini API key used by `cyberSaviour/agents/god/llm.py` for threat and forensic enrichment |
+| `VITE_API_BASE_URL` | No | Frontend API base URL. Defaults to `http://localhost:8000` |
+
+### Important Defaults
+
+- Backend runs on `http://localhost:8000`
+- Frontend Vite dev server runs on `http://localhost:8080`
+- WebSocket endpoint is `ws://localhost:8000/ws`
+- SQLite incident memory is stored at `cyberSaviour/memory/incidents.db`
+
+## Running the Project
+
+### Start the backend
+
+Important: run backend commands from inside `cyberSaviour/`, because some imports assume that working directory.
 
 ```bash
 cd cyberSaviour
-..\.venv\Scripts\python -m uvicorn server.app:app --reload --port 8000
+uvicorn server.app:app --reload --port 8000
 ```
 
-If you are not on Windows PowerShell, you can also use:
+Alternative CLI demo runner:
 
 ```bash
 cd cyberSaviour
-python -m uvicorn server.app:app --reload --port 8000
+python main.py
 ```
 
-#### Terminal 2 -> Start frontend
+### Start the frontend
+
+In a second terminal:
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-### URLs to Open During the Demo
+Then open:
 
-| Module | URL |
-|---|---|
-| Main dashboard | http://localhost:8080/dashboard |
-| CybORG simulation | http://localhost:8080/cyborg |
-| Forensic analysis | http://localhost:8080/forensic |
-| System status | http://localhost:8080/status |
-| Backend health check | http://localhost:8000/health |
+```text
+http://localhost:8080
+```
 
-### Demo Readiness Checklist
+### Verify the backend is up
 
-- Backend starts successfully on `http://localhost:8000`
-- Frontend starts successfully on `http://localhost:8080`
-- `cyberSaviour/.env` exists
-- Python virtual environment is activated
-- Dependencies are installed with `pip install -r requirements.txt` and `npm install`
-- Ports `8000` and `8080` are not blocked
+```bash
+curl http://localhost:8000/health
+```
 
-### Notes for Demo Day
+Expected shape:
 
-- The frontend defaults to calling `http://localhost:8000`, so run frontend and backend on the same machine unless you intentionally reconfigure the API base URL.
-- The repo already contains bundled benchmark/sample data for the CybORG and forensic demo flows.
-- No dedicated GPU is required for the demo.
+```json
+{
+  "status": "healthy",
+  "timestamp": "..."
+}
+```
+
+## How to Use the Platform
+
+### 1. Run a demo SOC pipeline
+
+The frontend can trigger demo scenarios, but you can also call the pipeline directly:
+
+```bash
+curl -X POST http://localhost:8000/api/pipeline/run \
+  -H "Content-Type: application/json" \
+  -d "{\"events\":[{\"source_ip\":\"192.168.1.5\",\"event_type\":\"failed_login\",\"raw\":\"Failed password from 192.168.1.5\",\"protocol\":null}]}"
+```
+
+### 2. Explore the dashboard pages
+
+The frontend routes include:
+
+- `/dashboard`
+- `/missions`
+- `/incidents/:id`
+- `/squad`
+- `/agents`
+- `/response`
+- `/codex`
+- `/cyborg`
+- `/forensic`
+- `/status`
+
+### 3. Run a CybORG-style scenario
+
+List scenarios:
+
+```bash
+curl http://localhost:8000/api/cyborg/scenarios
+```
+
+Run one:
+
+```bash
+curl -X POST http://localhost:8000/api/cyborg/run-scenario \
+  -H "Content-Type: application/json" \
+  -d "{\"scenario_name\":\"Scenario1\",\"num_steps\":20}"
+```
+
+### 4. Run a forensic benchmark analysis
+
+List available forensic events:
+
+```bash
+curl "http://localhost:8000/api/forensic/events?benchmark=CFA"
+```
+
+Analyze an event:
+
+```bash
+curl -X POST http://localhost:8000/api/forensic/analyze \
+  -H "Content-Type: application/json" \
+  -d "{\"event_id\":\"0\",\"benchmark\":\"CFA\"}"
+```
+
+### 5. Review and approve actions
+
+If the decision layer marks an action as high risk, the backend creates a pending response action. Approve or reject it with:
+
+```bash
+curl -X POST http://localhost:8000/api/response-actions/<ACTION_ID>/decision \
+  -H "Content-Type: application/json" \
+  -d "{\"decision\":\"approved\"}"
+```
+
+or
+
+```bash
+curl -X POST http://localhost:8000/api/response-actions/<ACTION_ID>/decision \
+  -H "Content-Type: application/json" \
+  -d "{\"decision\":\"rejected\"}"
+```
+
+## API Overview
+
+### Core and Health
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/health` | `GET` | Basic backend health check |
+| `/api/status` | `GET` | Unified status for pipeline, integrations, and game stats |
+| `/ws` | `GET` WebSocket | Real-time state sync to the frontend |
+
+### Game and Dashboard State
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/game-state` | `GET` | Current XP, rank, streak, and achievement state |
+| `/api/achievements` | `GET` | Achievement list |
+| `/api/missions` | `GET` | Active missions |
+| `/api/missions/{mission_id}/complete` | `POST` | Mark a mission complete and award XP |
+| `/api/demo/reset` | `POST` | Reset in-memory dashboard/demo state |
+
+### Pipeline Data
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/pipeline/run` | `POST` | Run the full pipeline on supplied events |
+| `/api/pipeline/result` | `POST` | Ingest pre-shaped pipeline output from the optional orchestrator |
+| `/api/alerts` | `GET` | Current alerts |
+| `/api/incidents` | `GET` | Current incidents |
+| `/api/agents` | `GET` | Agent state cards |
+| `/api/response-actions` | `GET` | Pending and executed response actions |
+| `/api/memory` | `GET` | Memory entries surfaced to the UI |
+| `/api/responses` | `GET` | Final response payloads |
+
+### Human Approval
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/response-actions/{action_id}/decision` | `POST` | Approve or reject a pending action |
+
+### CybORG Simulation
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/cyborg/scenarios` | `GET` | List available simulated scenarios |
+| `/api/cyborg/run-scenario` | `POST` | Run a scenario and feed its events through the main pipeline |
+
+### Forensic Analysis
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/forensic/events` | `GET` | List available forensic benchmark events |
+| `/api/forensic/analyze` | `POST` | Run synchronous forensic analysis |
+| `/api/forensic/analyze/async` | `POST` | Start async forensic analysis job |
+| `/api/forensic/jobs` | `GET` | List forensic jobs |
+| `/api/forensic/jobs/{job_id}` | `GET` | Poll a forensic job result |
+
+## Data and Persistence
+
+### In-Memory vs Persistent State
+
+The platform uses both volatile and persistent storage:
+
+- Alerts, incidents, actions, missions, and response payloads are stored in backend memory while the server is running
+- Historical incident memory is persisted in SQLite at `cyberSaviour/memory/incidents.db`
+- Forensic benchmark data is bundled in the repository under `Cybersleuth_Forensic_Agent/data`
+
+### Memory Model
+
+CyberSaviour uses:
+
+- short-term memory for current-session context
+- long-term memory for historical incident recall
+- repeat-offender tracking by IP
+- recall of recent incidents for decision support
+
+## Development Notes
+
+### Frontend/Backend Wiring
+
+- Frontend default API base: `http://localhost:8000`
+- Frontend dev server port: `8080`
+- Backend CORS is configured to allow localhost origins
+- WebSocket client connects to `/ws`
+
+### Forensic Integration Notes
+
+The integrated forensic bridge:
+
+- reads bundled benchmark metadata
+- parses PCAPs with Scapy
+- extracts attacker/victim IPs, ports, protocols, flow counts, and suspicious payload snippets
+- optionally asks Gemini for a forensic narrative
+- falls back to a rule-based report if the LLM is unavailable
+
+### CybORG Integration Notes
+
+The project includes a CybORG-inspired simulator instead of directly relying on upstream runtime compatibility. The bridge explicitly documents that this is because the vendored CybORG environment is not directly compatible with the NumPy version used by the current Python stack.
+
+### Optional Rust Orchestrator
+
+`cyberSaviour/orchestrator` exists as an optional path for pushing pre-shaped pipeline results into the FastAPI backend through `/api/pipeline/result`. The default local workflow does not require it.
+
+## Known Limitations
+
+- This is a prototype platform, not a production SOC deployment
+- Most dashboard state is in memory and resets when the backend restarts
+- Response execution is simulated rather than wired into real firewalls, SIEMs, or EDR tools
+- Authentication and role-based access control are not yet implemented for multi-user use
+- Privacy hardening such as redaction, retention controls, and encryption at rest is still limited
+- Some LLM features depend on a Gemini key and may fall back when quota is exhausted
+- The CybORG integration uses a compatibility simulator rather than full upstream runtime execution
+
+## Future Improvements
+
+- production-grade authentication and analyst roles
+- encrypted or pseudonymized telemetry storage
+- retention policies and privacy-aware redaction
+- integration with SIEM/EDR tools
+- stronger benchmark-based evaluation metrics
+- richer live ingestion connectors
+- policy-driven automated response with stronger safeguards
+- cloud deployment and multi-user collaboration features
+
+## Project Summary
+
+CyberSaviour brings together SOC automation, forensic analysis, simulation, and analyst oversight in a single educational platform. The backend pipeline, persistent memory, real-time frontend, CybORG-style simulation, and PCAP investigation flow are all present in this repository and can be run locally with a Python backend and Vite frontend.
+
+For the academic write-up and course-oriented explanation, see [PROJECT_REPORT_DS308.md](PROJECT_REPORT_DS308.md).
